@@ -1,0 +1,55 @@
+# main 브랜치에 코드가 올라오면 Firebase Hosting(https://courseware-acba8.web.app)에 자동 배포
+# 필요한 설정 (처음 한 번): 저장소 Settings → Secrets and variables → Actions
+#   Secret  FIREBASE_SERVICE_ACCOUNT : 배포 전용 서비스 계정 키(JSON 전체)
+name: Deploy to Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Actions 탭에서 "Run workflow" 로 수동 배포
+
+concurrency:
+  group: firebase-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FIREBASE_PROJECT: courseware-acba8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Firebase 웹 설정값은 .env.production 에서 읽음 (웹사이트에 공개되는 값이라 저장소에 둬도 됨)
+      - name: Build
+        run: npm run build
+
+      - name: Write service account key
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT 시크릿이 없습니다. README의 '자동 배포' 항목을 확인하세요."
+            exit 1
+          fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+
+      # 결제 전(Spark)이라 Cloud Functions 는 제외하고 사이트와 보안 규칙만 배포
+      - name: Deploy hosting + Firestore rules
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: npx firebase deploy --only hosting,firestore:rules --project "$FIREBASE_PROJECT" --non-interactive
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
