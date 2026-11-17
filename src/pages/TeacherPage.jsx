@@ -5,6 +5,9 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { createStudentAccounts, downloadCsv, parseStudentList, resetStudentPassword } from '../studentAccounts';
 
+// Cloud Functions 배포(Blaze 요금제) 후 .env.local 에 VITE_ENABLE_PASSWORD_RESET=true 로 켜기
+const PASSWORD_RESET_ENABLED = import.meta.env.VITE_ENABLE_PASSWORD_RESET === 'true';
+
 const SAMPLE = `30201,김민준
 30202,이서연
 30203,박지호,mypass123`;
@@ -130,7 +133,7 @@ export default function TeacherPage() {
           {resetError && <p className="error">{resetError}</p>}
           <table>
             <thead>
-              <tr><th>학번</th><th>이름</th><th>비밀번호 변경</th><th>비밀번호 초기화</th></tr>
+              <tr><th>학번</th><th>이름</th><th>비밀번호 변경</th>{PASSWORD_RESET_ENABLED && <th>비밀번호 초기화</th>}</tr>
             </thead>
             <tbody>
               {students.map((u) => (
@@ -138,7 +141,7 @@ export default function TeacherPage() {
                   <td>{u.studentId ?? '-'}</td>
                   <td>{u.displayName}</td>
                   <td>{u.mustChangePassword ? '아직 안 함' : '완료'}</td>
-                  <td>
+                  {PASSWORD_RESET_ENABLED && <td>
                     {resetDone[u.uid] ? (
                       <span>새 비밀번호: <code className="pw">{resetDone[u.uid]}</code></span>
                     ) : (
@@ -146,11 +149,17 @@ export default function TeacherPage() {
                         {resetting === u.uid ? '초기화 중…' : '초기화'}
                       </button>
                     )}
-                  </td>
+                  </td>}
                 </tr>
               ))}
             </tbody>
           </table>
+          {!PASSWORD_RESET_ENABLED && (
+            <p className="muted small">
+              학생이 비밀번호를 잊었다면: Firebase 콘솔 → Authentication 에서 그 학생(<code>학번@…</code>)을 삭제하고,
+              Firestore <code>users</code> 에서도 문서를 삭제한 뒤 위에서 다시 만들어 주세요.
+            </p>
+          )}
         </section>
       </main>
     </div>

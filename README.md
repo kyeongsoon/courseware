@@ -94,8 +94,16 @@ cd functions && npm install && cd ..
 firebase deploy --only functions
 ```
 
-배포하지 않아도 나머지 기능은 모두 동작합니다. 그 경우 **초기화** 버튼을 누르면 "아직 배포되지 않았어요" 안내가 나오고,
-대신 Firebase 콘솔 → Authentication 에서 학생을 삭제하고 Firestore `users` 문서도 삭제한 뒤 다시 만들어 주면 됩니다.
+3. `.env.local` 에 `VITE_ENABLE_PASSWORD_RESET=true` 로 바꾸고 다시 빌드·배포하면 **초기화** 버튼이 나타납니다.
+
+```bash
+npm run build && firebase deploy --only hosting
+```
+
+**결제 전(기본값 `false`)** 에는 초기화 버튼이 숨겨져 있고, 나머지 기능은 모두 동작합니다.
+학생이 비밀번호를 잊으면 Firebase 콘솔 → Authentication 에서 학생을 삭제하고 Firestore `users` 문서도 삭제한 뒤 다시 만들어 주세요.
+
+> ⚠️ 결제 전에는 `firebase deploy` 에 꼭 `--only hosting,firestore:rules` 를 붙이세요. 그냥 실행하면 Functions 배포 때문에 Blaze 요금제 오류가 납니다.
 
 ## 로컬 테스트 (에뮬레이터, 실제 프로젝트 없이)
 
