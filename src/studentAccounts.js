@@ -58,7 +58,7 @@ export function parseStudentList(text) {
  * 같은 Auth 인스턴스로 가입시키면 교사가 로그아웃되므로, 메모리 전용 보조 앱을 따로 띄웁니다.
  * (무료 Spark 요금제에서 동작. 같은 IP 에서 시간당 생성 개수 제한이 있으니 한 반씩 만드세요.)
  */
-export async function createStudentAccounts(students, teacherUid, onProgress = () => {}) {
+export async function createStudentAccounts(students, teacherUid, onProgress = () => {}, classId = null) {
   const secondary = initializeApp(app.options, `student-creator-${Date.now()}`);
   const secondaryAuth = initializeAuth(secondary, { persistence: inMemoryPersistence });
   if (useEmulator) connectAuthEmulator(secondaryAuth, AUTH_EMULATOR_URL, { disableWarnings: true });
@@ -76,6 +76,7 @@ export async function createStudentAccounts(students, teacherUid, onProgress = (
           displayName: s.displayName,
           studentId: s.studentId,
           role: 'student',
+          classId: classId ?? null,
           mustChangePassword: true,
           createdBy: teacherUid,
           createdAt: serverTimestamp(),

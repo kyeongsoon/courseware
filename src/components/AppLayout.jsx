@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
   Users,
+  School,
   UserPlus,
   KeyRound,
   CircleHelp,
@@ -32,6 +33,7 @@ function buildSections({ isTeacher, hasPassword }) {
     sections.push({
       title: '학생 관리',
       items: [
+        { to: '/teacher/classes', label: '반 관리', icon: School },
         { to: '/teacher/students', label: '학생 명단', icon: Users },
         { to: '/teacher/accounts', label: '계정 만들기', icon: UserPlus },
       ],
@@ -45,6 +47,7 @@ function buildSections({ isTeacher, hasPassword }) {
 
 export function usePageTitle() {
   const { pathname } = useLocation();
+  if (pathname.startsWith('/teacher/classes')) return '반 관리';
   return (
     {
       '/': '홈',

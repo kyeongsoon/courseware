@@ -16,18 +16,33 @@ service cloud.firestore {
       // 본인 문서 생성: 역할은 반드시 student
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.role == 'student'
-        && request.resource.data.uid == uid;
+        && request.resource.data.uid == uid
+        && request.resource.data.get('classId', null) == null;
 
-      // 본인 수정: role / uid / createdAt 은 변경 불가 (권한 상승 방지)
+      // 본인 수정: 역할·소속 반·계정 정보는 변경 불가 (권한 상승·반 이동 방지)
       allow update: if signedIn() && request.auth.uid == uid
         && !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['role', 'uid', 'createdAt']);
+              .hasAny(['role', 'uid', 'createdAt', 'classId', 'loginId', 'createdBy']);
 
       // 교사가 학생 계정 문서를 대신 생성 (역할은 student 만 가능)
       allow create: if isTeacher() && request.resource.data.role == 'student';
 
       // 교사는 학생 정보 수정 가능, 삭제는 교사만
       allow update, delete: if isTeacher();
+    }
+
+    // 반(학급): 로그인한 누구나 읽기(학생이 자기 반 이름을 봄), 만들기·수정·삭제는 교사만
+    match /classes/{classId} {
+      allow read: if signedIn();
+      allow create: if isTeacher()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 30;
+      allow update: if isTeacher()
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 30;
+      allow delete: if isTeacher();
     }
 
     // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)
