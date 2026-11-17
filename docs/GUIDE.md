@@ -31,7 +31,7 @@
    - `classes/{classId}` { name, teacherUid }, 학생 소속은 `users/{uid}.classId`
 4. ✅ **단원/차시 콘텐츠** – 교사가 차시(제목, 설명, 자료 링크, 공개 여부)를 등록
    - `units/{unitId}`, `lessons/{lessonId}` (반별 공개: `openClassIds`)
-5. ✅ **학생 대시보드** – 내 반의 공개된 차시 목록, 진도 표시
+5. ✅ **학생 대시보드** – 내 반의 공개된 차시 목록 (진도 표시는 7번 학습 현황에서)
 
 ## 3단계. 정보 교과 핵심 활동
 
