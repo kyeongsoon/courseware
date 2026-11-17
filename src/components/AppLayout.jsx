@@ -4,6 +4,7 @@ import {
   LayoutGrid,
   Users,
   School,
+  Library,
   UserPlus,
   KeyRound,
   CircleHelp,
@@ -28,7 +29,9 @@ function readCollapsed() {
 
 /** 메뉴 구성: 역할에 따라 보이는 항목이 달라짐 */
 function buildSections({ isTeacher, hasPassword }) {
-  const sections = [{ title: '수업', items: [{ to: '/', label: '홈', icon: LayoutGrid, end: true }] }];
+  const lessonItems = [{ to: '/', label: '홈', icon: LayoutGrid, end: true }];
+  if (isTeacher) lessonItems.push({ to: '/teacher/lessons', label: '수업 관리', icon: Library });
+  const sections = [{ title: '수업', items: lessonItems }];
   if (isTeacher) {
     sections.push({
       title: '학생 관리',
@@ -48,6 +51,10 @@ function buildSections({ isTeacher, hasPassword }) {
 export function usePageTitle() {
   const { pathname } = useLocation();
   if (pathname.startsWith('/teacher/classes')) return '반 관리';
+  if (pathname === '/teacher/lessons/new') return '새 차시';
+  if (pathname.endsWith('/edit')) return '차시 수정';
+  if (pathname.startsWith('/teacher/lessons')) return '수업 관리';
+  if (pathname.startsWith('/lessons/')) return '수업';
   return (
     {
       '/': '홈',

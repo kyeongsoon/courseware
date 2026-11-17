@@ -54,9 +54,15 @@ export default function ClassesPage() {
     const n = normalizeClassName(name);
     if (!n) return;
     if (classes.some((c) => c.name === n)) return setErr(`'${n}' 반이 이미 있어요.`);
+    // 바로 비워서 다음 반 이름을 이어서 입력할 수 있게 하고, 실패하면 되돌림
+    setName('');
     run(async () => {
-      await createClass(n, user.uid);
-      setName('');
+      try {
+        await createClass(n, user.uid);
+      } catch (e2) {
+        setName(n);
+        throw e2;
+      }
       setMsg(`'${n}' 반을 만들었어요.`);
     });
   };

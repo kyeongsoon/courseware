@@ -3,9 +3,18 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
     function isTeacher() {
-      return signedIn()
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+      return signedIn() && me().role == 'teacher';
+    }
+    // 로그인한 학생의 소속 반 (없으면 null)
+    function myClassId() {
+      return me().get('classId', null);
+    }
+    function isStr(v, min, max) {
+      return v is string && v.size() >= min && v.size() <= max;
     }
 
     match /users/{uid} {
@@ -42,6 +51,34 @@ service cloud.firestore {
         && request.resource.data.name is string
         && request.resource.data.name.size() > 0
         && request.resource.data.name.size() <= 30;
+      allow delete: if isTeacher();
+    }
+
+    // 단원: 제목은 학생도 봐야 하므로 로그인한 누구나 읽기, 쓰기는 교사만
+    match /units/{unitId} {
+      allow read: if signedIn();
+      allow create, update: if isTeacher()
+        && isStr(request.resource.data.title, 1, 60)
+        && request.resource.data.order is number;
+      allow delete: if isTeacher();
+    }
+
+    // 차시: 교사는 전부, 학생은 자기 반에 공개된 차시만 읽기
+    match /lessons/{lessonId} {
+      function validLesson() {
+        let d = request.resource.data;
+        return isStr(d.unitId, 1, 100)
+          && isStr(d.title, 1, 100)
+          && isStr(d.summary, 0, 300)
+          && isStr(d.body, 0, 20000)
+          && isStr(d.videoUrl, 0, 500)
+          && d.links is list && d.links.size() <= 20
+          && d.openClassIds is list && d.openClassIds.size() <= 100
+          && d.order is number;
+      }
+      allow read: if isTeacher()
+        || (signedIn() && myClassId() != null && myClassId() in resource.data.openClassIds);
+      allow create, update: if isTeacher() && validLesson();
       allow delete: if isTeacher();
     }
 

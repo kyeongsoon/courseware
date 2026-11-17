@@ -9,6 +9,9 @@ import {
   query,
   serverTimestamp,
   updateDoc,
+  where,
+  getDocs,
+  arrayRemove,
   writeBatch,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -72,8 +75,15 @@ export async function assignStudents(uids, classId) {
 }
 
 // 반 삭제: 소속 학생들을 먼저 '반 없음'으로 돌린 뒤 반 문서 삭제 (학생 계정은 그대로)
+// 이 반에 공개돼 있던 차시에서도 반을 빼서, 지운 반이 공개 목록에 남지 않게 함
 export async function deleteClass(classId, memberUids) {
   await assignStudents(memberUids, null);
+  const opened = await getDocs(query(collection(db, 'lessons'), where('openClassIds', 'array-contains', classId)));
+  for (let i = 0; i < opened.docs.length; i += 450) {
+    const batch = writeBatch(db);
+    opened.docs.slice(i, i + 450).forEach((d) => batch.update(d.ref, { openClassIds: arrayRemove(classId) }));
+    await batch.commit();
+  }
   await deleteDoc(doc(db, 'classes', classId));
 }
 

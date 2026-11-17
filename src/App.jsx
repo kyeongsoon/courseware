@@ -11,6 +11,9 @@ import ChangePasswordPage from './pages/ChangePasswordPage';
 import HelpPage from './pages/HelpPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
+import TeacherLessonsPage from './pages/TeacherLessonsPage';
+import LessonEditorPage from './pages/LessonEditorPage';
+import LessonViewPage from './pages/LessonViewPage';
 
 export default function App() {
   return (
@@ -25,6 +28,10 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/help" element={<HelpPage />} />
+            <Route path="/lessons/:lessonId" element={<LessonViewPage />} />
+            <Route path="/teacher/lessons" element={<ProtectedRoute requireTeacher><TeacherLessonsPage /></ProtectedRoute>} />
+            <Route path="/teacher/lessons/new" element={<ProtectedRoute requireTeacher><LessonEditorPage /></ProtectedRoute>} />
+            <Route path="/teacher/lessons/:lessonId/edit" element={<ProtectedRoute requireTeacher><LessonEditorPage key="edit" /></ProtectedRoute>} />
             <Route path="/teacher/classes" element={<ProtectedRoute requireTeacher><ClassesPage /></ProtectedRoute>} />
             <Route path="/teacher/classes/:classId" element={<ProtectedRoute requireTeacher><ClassDetailPage /></ProtectedRoute>} />
             <Route path="/teacher/students" element={<ProtectedRoute requireTeacher><StudentsPage /></ProtectedRoute>} />
