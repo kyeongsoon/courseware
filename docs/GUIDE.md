@@ -27,7 +27,7 @@
 
 ## 2단계. 수업 구조
 
-3. ✅ **학급(반) 관리** – 교사가 반을 만들고 참여 코드 발급 → 학생이 코드로 가입
+3. ✅ **학급(반) 관리** – 교사가 반을 만들고 학생을 배정 (학번으로 자동 배정 지원)
    - `classes/{classId}` { name, teacherUid, joinCode }, `classes/{classId}/members/{uid}`
 4. **단원/차시 콘텐츠** – 교사가 차시(제목, 설명, 자료 링크, 공개 여부)를 등록
    - `courses/{courseId}/lessons/{lessonId}`
