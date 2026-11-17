@@ -235,3 +235,70 @@ input[type='checkbox'] { width: 18px; height: 18px; accent-color: var(--primary)
 .stat-note { display: inline-block; margin-top: 2px; font-size: 0.8rem; color: var(--warn); text-decoration: none; }
 .class-chip { margin-left: 8px; background: var(--primary-soft); color: var(--primary-text); border-radius: 999px; padding: 2px 10px; font-size: 0.85rem; font-weight: 600; }
 @media (max-width: 860px) { .input-inline { min-width: 0; flex: 1; } }
+
+/* ───── 수업(단원·차시) ───── */
+.unit-title { display: flex; align-items: baseline; gap: 8px; }
+.unit-no { color: var(--primary-text); font-size: 0.85rem; font-weight: 700; }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.lesson-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-top: 1px solid var(--border); }
+.lesson-row:first-child { border-top: none; }
+.lesson-no { flex: none; width: 52px; color: var(--muted); font-size: 0.85rem; font-weight: 600; }
+.lesson-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.lesson-title { font-weight: 600; color: var(--text); text-decoration: none; }
+a.lesson-title:hover { text-decoration: underline; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.muted-tag { background: var(--field); color: var(--muted); }
+.row.nowrap { flex-wrap: nowrap; }
+.icon-btn:disabled { opacity: 0.3; cursor: default; background: none; }
+.lesson-card {
+  display: flex; align-items: center; gap: 12px; padding: 14px 12px; border-radius: 12px;
+  text-decoration: none; color: var(--text);
+}
+.lesson-card:hover { background: var(--primary-soft); }
+.lesson-list li + li .lesson-card { border-top: 1px solid var(--border); border-radius: 0; }
+.lesson-list li + li .lesson-card:hover { border-radius: 12px; border-top-color: transparent; }
+
+.editor { display: flex; flex-direction: column; gap: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; }
+.prose-input { font-family: inherit; font-size: 1rem; line-height: 1.7; }
+.right-note { align-self: flex-end; font-weight: 400; }
+.label-like { font-size: 0.9rem; font-weight: 600; color: var(--text-2); }
+.links-edit { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.link-row { display: grid; grid-template-columns: 1fr 2fr auto; gap: 8px; width: 100%; }
+.link-row input { padding: 9px 12px; font-size: 0.95rem; min-width: 0; }
+.check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 8px; }
+.check-card {
+  flex-direction: row; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border);
+  border-radius: 10px; cursor: pointer; font-weight: 500; color: var(--text);
+}
+.check-card.on { border-color: var(--accent); background: var(--primary-soft); }
+.editor-actions { position: sticky; bottom: 0; padding: 12px 0; background: var(--bg); }
+.push-right { margin-left: auto; }
+
+.lesson-view { gap: 16px; }
+.lesson-meta { color: var(--primary-text); font-size: 0.85rem; font-weight: 600; display: flex; gap: 4px; }
+.lesson-heading { font-size: 1.5rem !important; letter-spacing: -0.02em; }
+.lesson-summary { margin: 0; color: var(--text-2); font-size: 1.05rem; }
+.video { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #000; }
+.video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.lesson-body { line-height: 1.8; font-size: 1.02rem; }
+.lesson-body p { margin: 0 0 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lesson-links { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 16px; }
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.pager-link {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--surface); border-radius: 12px;
+  text-decoration: none; color: var(--text); box-shadow: 0 1px 2px rgb(0 0 0 / 0.04); min-width: 0;
+}
+.pager-link span { display: flex; flex-direction: column; min-width: 0; }
+.pager-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.pager-link small { color: var(--muted); font-weight: 400; }
+.pager-link.next { justify-content: flex-end; text-align: right; }
+.pager-link:hover { background: var(--primary-soft); }
+
+@media (max-width: 860px) {
+  .grid-2 { grid-template-columns: 1fr; }
+  .link-row { grid-template-columns: 1fr auto; }
+  .link-row input:first-child { grid-column: 1 / -1; }
+  .lesson-row { flex-wrap: wrap; }
+  .lesson-row .row.nowrap { width: 100%; justify-content: flex-end; }
+}

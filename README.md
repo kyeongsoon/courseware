@@ -3,7 +3,7 @@
 학생과 함께 수업하는 정보교과 웹 코스웨어입니다. (Vite + React + Firebase)
 
 - 전체 개발 로드맵: [docs/GUIDE.md](docs/GUIDE.md)
-- 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**
+- 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**, **③ 수업(단원·차시)**
   - 교사가 학생 계정을 한꺼번에 생성 (학번 = 아이디, 초기 비밀번호 자동 생성 + CSV 저장)
   - 학생은 첫 로그인 때 비밀번호 변경
   - 교사는 Google 또는 이메일 계정으로 로그인
@@ -82,6 +82,20 @@ firebase deploy --only firestore:rules
 - **계정 만들기**에서 "배정할 반"을 고르면 계정을 만들면서 바로 반에 넣을 수 있습니다.
 - 학생은 홈에서 자기 반 이름을 볼 수 있고, 스스로 반을 바꿀 수는 없습니다 (보안 규칙).
 
+## 5-2. 수업 만들기 (교사)
+
+사이드바 **수업 관리**에서:
+1. **단원 만들기** (예: `자료와 정보`). 화살표로 단원 순서를 바꿀 수 있어요.
+2. 단원의 **차시 추가** → 제목, 한 줄 요약, 본문, 영상 주소, 자료 링크(구글 슬라이드·문서 등)를 입력합니다.
+   - 본문은 일반 글로 쓰고 빈 줄로 문단을 나눕니다. `http`로 시작하는 주소는 자동으로 링크가 됩니다.
+   - YouTube 주소를 넣으면 수업 화면에 영상이 바로 재생됩니다 (youtube-nocookie 사용).
+   - 자료 링크는 `http://`·`https://` 주소만 저장됩니다.
+3. **공개할 반**을 고르면 그 반 학생의 홈에 나타납니다. 아무 반도 고르지 않으면 비공개(교사만 보기)입니다.
+4. 차시 순서는 화살표로, 내용은 **수정**에서 바꿉니다. 차시가 남아 있는 단원은 지울 수 없습니다.
+
+학생은 홈에서 자기 반에 공개된 차시만 단원별로 보고, 수업 화면 아래 **이전/다음**으로 넘깁니다.
+공개되지 않은 차시는 주소를 알아도 열리지 않습니다 (보안 규칙). 반을 삭제하면 그 반은 차시 공개 목록에서도 자동으로 빠집니다.
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -142,6 +156,15 @@ users/{uid}
 classes/{classId}
   name         // 예: "3학년 2반"
   teacherUid, createdAt
+
+units/{unitId}       // 단원
+  title, order, teacherUid, createdAt
+
+lessons/{lessonId}   // 차시
+  unitId, title, order, summary, body, videoUrl
+  links        // [{ label, url }]
+  openClassIds // 공개할 반 ID 목록 (비어 있으면 비공개)
+  teacherUid, createdAt, updatedAt
 ```
 
 ## 폴더 구조
@@ -158,6 +181,11 @@ src/
   pages/ClassesPage.jsx       교사 전용: 반 목록, 반 만들기, 학번으로 자동 배정
   pages/ClassDetailPage.jsx   교사 전용: 반 소속 학생, 추가·빼기, 이름 바꾸기, 삭제
   classes.js                  반 데이터 (구독, 생성, 배정, 삭제)
+  pages/TeacherLessonsPage.jsx  교사 전용: 단원·차시 목록, 순서 바꾸기
+  pages/LessonEditorPage.jsx  교사 전용: 차시 만들기·수정·삭제, 공개할 반
+  pages/LessonViewPage.jsx    수업 화면 (영상, 본문, 자료, 이전/다음)
+  components/LessonBody.jsx   본문 표시 (주소 자동 링크, HTML 해석 안 함)
+  lessons.js                  단원·차시 데이터, 주소 검사, YouTube 주소 해석
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙

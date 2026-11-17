@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useClasses } from '../classes';
-import { BookOpen, KeyRound, School, UserPlus, Users } from 'lucide-react';
+import { groupByUnit, useLessons, useUnits } from '../lessons';
+import { BookOpen, ChevronRight, KeyRound, Library, School, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
 
@@ -34,6 +35,7 @@ function TeacherHome() {
       <section className="panel">
         <h2>바로 가기</h2>
         <div className="quick">
+          <Link to="/teacher/lessons" className="quick-item"><Library size={20} /> 수업 관리</Link>
           <Link to="/teacher/classes" className="quick-item"><School size={20} /> 반 관리</Link>
           <Link to="/teacher/accounts" className="quick-item"><UserPlus size={20} /> 학생 계정 만들기</Link>
           <Link to="/teacher/students" className="quick-item"><Users size={20} /> 학생 명단 보기</Link>
@@ -55,6 +57,42 @@ function useMyClassName(classId) {
   return name;
 }
 
+// 학생: 내 반에 공개된 수업을 단원별로
+function StudentLessons({ classId }) {
+  const { units } = useUnits();
+  const { lessons, loading } = useLessons({ isTeacher: false, classId });
+  const groups = groupByUnit(units, lessons).filter((g) => g.lessons.length);
+
+  if (loading) return <div className="muted">불러오는 중…</div>;
+  if (!classId || groups.length === 0) {
+    return (
+      <section className="panel empty">
+        <BookOpen size={32} strokeWidth={1.5} />
+        <p>{classId ? '아직 열린 수업이 없어요. 선생님이 수업을 열면 여기에 표시됩니다.' : '아직 반이 정해지지 않았어요. 선생님이 반에 넣어 주면 수업이 보여요.'}</p>
+      </section>
+    );
+  }
+  return groups.map((g) => (
+    <section key={g.unit.id} className="panel">
+      <h2 className="unit-title"><span className="unit-no">{units.findIndex((u) => u.id === g.unit.id) + 1}단원</span> {g.unit.title}</h2>
+      <ol className="lesson-list">
+        {g.lessons.map((l, i) => (
+          <li key={l.id}>
+            <Link to={`/lessons/${l.id}`} className="lesson-card">
+              <span className="lesson-no">{i + 1}차시</span>
+              <span className="lesson-main">
+                <span className="lesson-title">{l.title}</span>
+                {l.summary && <span className="muted small">{l.summary}</span>}
+              </span>
+              <ChevronRight size={18} className="chev" />
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
+  ));
+}
+
 export default function DashboardPage() {
   const { profile, isTeacher } = useAuth();
   const myClass = useMyClassName(isTeacher ? null : profile?.classId);
@@ -71,10 +109,7 @@ export default function DashboardPage() {
       {isTeacher ? (
         <TeacherHome />
       ) : (
-        <section className="panel empty">
-          <BookOpen size={32} strokeWidth={1.5} />
-          <p>아직 열린 수업이 없어요. 선생님이 수업을 열면 여기에 표시됩니다.</p>
-        </section>
+        <StudentLessons classId={profile?.classId} />
       )}
     </>
   );
