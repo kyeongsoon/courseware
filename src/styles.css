@@ -36,3 +36,10 @@ input:focus { outline: 2px solid var(--primary); border-color: transparent; }
 .badge { background: #dbeafe; color: var(--primary); border-radius: 999px; padding: 2px 10px; font-size: 0.8rem; font-weight: 600; }
 table { width: 100%; border-collapse: collapse; background: #fff; }
 th, td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.small { font-size: 0.85rem; }
+.panel { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 12px; overflow-x: auto; }
+.panel h2 { margin: 0; }
+textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font: 0.95rem ui-monospace, monospace; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+tr.bad td { color: var(--error); }
+.result { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }

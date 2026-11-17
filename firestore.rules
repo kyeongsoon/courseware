@@ -23,6 +23,9 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys()
               .hasAny(['role', 'uid', 'createdAt']);
 
+      // 교사가 학생 계정 문서를 대신 생성 (역할은 student 만 가능)
+      allow create: if isTeacher() && request.resource.data.role == 'student';
+
       // 교사는 학생 정보 수정 가능, 삭제는 교사만
       allow update, delete: if isTeacher();
     }

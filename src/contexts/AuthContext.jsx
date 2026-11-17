@@ -3,13 +3,14 @@ import {
   onAuthStateChanged,
   signInWithPopup,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  updateProfile,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   signOut,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
+import { loginIdToEmail } from '../studentAccounts';
 
 const AuthContext = createContext(null);
 
@@ -17,9 +18,11 @@ const AuthContext = createContext(null);
  * Firestore users/{uid} 문서 구조
  * {
  *   uid, email, displayName,
+ *   loginId: '30215',            // 교사가 만든 학생 계정의 로그인 아이디
  *   studentId: '30215' | null,   // 학번 (학년+반+번호)
  *   role: 'student' | 'teacher', // 교사 권한은 콘솔에서 직접 부여
- *   createdAt, lastLoginAt
+ *   mustChangePassword: boolean, // 교사가 준 초기 비밀번호를 아직 안 바꿨으면 true
+ *   createdBy, createdAt, lastLoginAt
  * }
  */
 async function ensureUserDoc(user, extra = {}) {
@@ -79,22 +82,24 @@ export function AuthProvider({ children }) {
     await ensureUserDoc(user);
   };
 
-  const loginWithEmail = async (email, password) => {
-    const { user } = await signInWithEmailAndPassword(auth, email, password);
+  // 아이디(학번) 또는 이메일 + 비밀번호 로그인
+  const loginWithId = async (idOrEmail, password) => {
+    const { user } = await signInWithEmailAndPassword(auth, loginIdToEmail(idOrEmail), password);
     await ensureUserDoc(user);
   };
 
-  const signupWithEmail = async ({ email, password, displayName, studentId }) => {
-    const { user } = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(user, { displayName });
-    await ensureUserDoc(user, { displayName, studentId });
+  // 현재 비밀번호 확인 후 새 비밀번호로 변경
+  const changePassword = async (currentPassword, newPassword) => {
+    const cred = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, cred);
+    await updatePassword(user, newPassword);
+    await updateDoc(doc(db, 'users', user.uid), { mustChangePassword: false });
   };
 
   const completeProfile = async ({ displayName, studentId }) => {
     await updateDoc(doc(db, 'users', user.uid), { displayName, studentId });
   };
 
-  const resetPassword = (email) => sendPasswordResetEmail(auth, email);
   const logout = () => signOut(auth);
 
   const value = {
@@ -103,10 +108,9 @@ export function AuthProvider({ children }) {
     loading,
     isTeacher: profile?.role === 'teacher',
     loginWithGoogle,
-    loginWithEmail,
-    signupWithEmail,
+    loginWithId,
+    changePassword,
     completeProfile,
-    resetPassword,
     logout,
   };
 

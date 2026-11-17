@@ -4,3 +4,7 @@ dist
 .env.local
 .firebase
 *.log
+
+# Firebase emulator logs
+firebase-debug.log
+firestore-debug.log
