@@ -120,8 +120,11 @@ firebase deploy --only firestore:rules
 알아 둘 점
 - 웹사이트라서 학생이 다른 탭·앱으로 가는 것까지는 막을 수 없습니다. 우리 사이트 안에서만 교사 화면으로 돌려보냅니다.
 - 영상 위치는 교사·학생 기기의 시계를 기준으로 맞추므로, 기기 시계가 크게 틀리면 몇 초 어긋날 수 있습니다 (2초 넘게 어긋나면 다시 맞춤).
-- 슬라이드 그림은 Firestore에 저장되므로 학생이 볼 때마다 무료 전송량(월 10GB)을 씁니다. 글 위주 슬라이드는 장당 수십 KB, 사진이 많은 슬라이드는 수백 KB입니다.
-  사진이 많은 30장짜리를 30명이 하루 6교시 보면 한 달에 수 GB가 될 수 있으니, Firebase 콘솔 → 사용량에서 가끔 확인하세요.
+- 슬라이드 그림은 Firestore에 저장되고, 학생 기기가 처음 볼 때 서버에서 받습니다(무료 전송량 월 10GB를 씀).
+  한 번 받은 슬라이드는 그 기기 브라우저(IndexedDB)에 보관해서, 다시 열거나 새로고침해도 서버에서 또 받지 않습니다.
+  같은 PC를 쓰는 다른 학생도 보관본을 그대로 씁니다. PDF를 바꾸면 버전(`slidesVersion`)이 바뀌어 새로 받고, 예전 보관본은 지워집니다.
+  글 위주 슬라이드는 장당 수십 KB, 사진이 많은 슬라이드는 수백 KB이니 Firebase 콘솔 → 사용량에서 가끔 확인하세요.
+- 사이트 프로그램 파일(`/assets/`)은 브라우저가 1년간 보관하고, 페이지는 매번 최신인지 확인합니다(`firebase.json`의 headers). 배포하면 바로 새 버전이 보입니다.
 - 학생 기기는 1분마다 접속 신호를 보냅니다. 30명이 50분 수업하면 쓰기 약 1,500회로, 무료 한도(하루 2만 회) 안에서 하루 5~6교시 정도 쓸 수 있습니다.
 
 ## 6. 학생 비밀번호 초기화 (교사)
@@ -192,7 +195,7 @@ lessons/{lessonId}   // 차시
   unitId, title, order, summary, body, videoUrl
   links        // [{ label, url }]
   openClassIds // 공개할 반 ID 목록 (비어 있으면 비공개)
-  slideCount, slidesName   // 올린 슬라이드 장수, PDF 파일 이름
+  slideCount, slidesName, slidesVersion   // 올린 슬라이드 장수, PDF 파일 이름, 올릴 때마다 바뀌는 버전
 lessons/{lessonId}/slides/{000…}   // 슬라이드 그림
   index, image (data URL, 1MB 미만), w, h
   teacherUid, createdAt, updatedAt
@@ -231,6 +234,7 @@ src/
   components/LessonVideo.jsx  수업 영상 (수업 중에는 교사 영상에 맞춰 재생)
   components/SlideViewer.jsx  슬라이드 보기 (넘기기, 리모컨, 전체 화면, 수업 중 교사 따라가기)
   slides.js                   PDF → 슬라이드 그림 변환(pdf.js), 저장, 불러오기
+  slideCache.js               슬라이드 기기 보관(IndexedDB) — 다시 볼 때 서버에서 안 받음
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙
