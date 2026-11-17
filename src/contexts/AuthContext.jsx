@@ -58,6 +58,8 @@ export function AuthProvider({ children }) {
         setLoading(false);
         return;
       }
+      // 프로필을 받기 전까지는 '불러오는 중' 으로 둬야 화면이 여러 번 바뀌며 입력값이 지워지지 않음
+      setLoading(true);
       // 프로필 문서를 실시간 구독 (교사가 role 을 바꾸면 즉시 반영)
       unsubProfile = onSnapshot(
         doc(db, 'users', u.uid),

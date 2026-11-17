@@ -35,9 +35,9 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <div className="auth-wrap">
+    <div className={forced ? 'auth-wrap' : 'form-wrap'}>
       <form className="card" onSubmit={onSubmit}>
-        <h1>비밀번호 변경</h1>
+        {forced && <h1>비밀번호 변경</h1>}
         <p className="muted">
           {forced ? '처음 로그인했어요. 선생님이 준 비밀번호를 나만 아는 비밀번호로 바꿔 주세요.' : '새 비밀번호를 입력해 주세요.'}
         </p>

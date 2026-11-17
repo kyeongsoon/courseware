@@ -1,11 +1,14 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import DashboardPage from './pages/DashboardPage';
-import TeacherPage from './pages/TeacherPage';
+import StudentsPage from './pages/StudentsPage';
+import TeacherAccountsPage from './pages/TeacherAccountsPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
+import HelpPage from './pages/HelpPage';
 
 export default function App() {
   return (
@@ -14,9 +17,17 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetupPage /></ProtectedRoute>} />
-          <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/teacher" element={<ProtectedRoute requireTeacher><TeacherPage /></ProtectedRoute>} />
+
+          {/* 로그인 후 화면: 왼쪽 사이드바 + 본문 */}
+          <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/change-password" element={<ChangePasswordPage />} />
+            <Route path="/help" element={<HelpPage />} />
+            <Route path="/teacher/students" element={<ProtectedRoute requireTeacher><StudentsPage /></ProtectedRoute>} />
+            <Route path="/teacher/accounts" element={<ProtectedRoute requireTeacher><TeacherAccountsPage /></ProtectedRoute>} />
+            <Route path="/teacher" element={<Navigate to="/teacher/students" replace />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
