@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Check, ChevronDown, ChevronUp, Hand, Radio, Square, Users, Volume2 } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, EyeOff, Hand, Radio, Square, Users, Volume2 } from 'lucide-react';
 import { useLive } from '../contexts/LiveContext';
 
 function TeacherBar({ t }) {
@@ -18,6 +18,9 @@ function TeacherBar({ t }) {
       <div className="live-row">
         <span className="live-dot" aria-hidden /> <b>{s.className}</b> 실시간 수업 중
         <span className="live-stat"><Users size={16} /> 접속 {t.onlineCount}명</span>
+        <span className={`live-stat ${t.awayCount ? 'away' : ''}`} title="다른 탭이나 다른 앱을 보고 있는 학생">
+          <EyeOff size={16} /> 다른 화면 {t.awayCount}명
+        </span>
         <span className={`live-stat ${t.hands.length ? 'hot' : ''}`}><Hand size={16} /> {t.hands.length}</span>
         <span className="live-stat"><Check size={16} /> 다 했어요 {t.doneCount}/{t.onlineCount}</span>
         <span className="live-spacer" />
@@ -43,13 +46,20 @@ function TeacherBar({ t }) {
           ) : (
             <>
               <div className="row">
+                <span className="legend"><span className="presence on" /> 보는 중 <span className="presence away" /> 다른 탭·앱 <span className="presence off" /> 연결 끊김</span>
+                <span className="live-spacer" />
                 {t.hands.length > 0 && <button className="btn small" onClick={t.lowerAll}>손 모두 내리기</button>}
               </div>
               <ul className="member-grid">
                 {t.members.map((m) => (
-                  <li key={m.uid} className={`member ${m.online ? '' : 'offline'}`}>
-                    <span className={`presence ${m.online ? 'on' : ''}`} title={m.online ? '접속 중' : '연결 끊김'} />
+                  <li key={m.uid} className={`member ${m.status}`}>
+                    <span
+                      className={`presence ${m.status}`}
+                      title={{ on: '수업 화면을 보고 있어요', away: '다른 탭이나 앱을 보고 있어요', off: '연결이 끊겼어요' }[m.status]}
+                    />
                     <span className="member-name">{m.studentId} {m.name}</span>
+                    {m.status === 'away' && <span className="tag away">다른 화면</span>}
+                    {m.awayCount > 0 && <span className="away-count" title="이번 수업에서 다른 화면으로 간 횟수">{m.awayCount}회</span>}
                     {m.doneLessonId === s.lessonId && <span className="tag done">다 했어요</span>}
                     {m.hand && (
                       <button className="tag hand" onClick={() => t.lowerHand(m.uid)} title="손 내려 주기">✋ 내리기</button>

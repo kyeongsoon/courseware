@@ -108,12 +108,14 @@ service cloud.firestore {
       match /members/{uid} {
         function validMember() {
           let d = request.resource.data;
-          return d.keys().hasOnly(['name', 'studentId', 'lastSeen', 'hand', 'doneLessonId'])
+          return d.keys().hasOnly(['name', 'studentId', 'lastSeen', 'hand', 'doneLessonId', 'focused', 'awayCount'])
             && isStr(d.name, 0, 50)
             && isStr(d.studentId, 0, 20)
             && d.lastSeen == request.time
             && d.hand is bool
-            && isStr(d.doneLessonId, 0, 100);
+            && isStr(d.doneLessonId, 0, 100)
+            && d.get('focused', true) is bool
+            && d.get('awayCount', 0) is int && d.get('awayCount', 0) >= 0;
         }
         allow read: if isTeacher() || (signedIn() && request.auth.uid == uid);
         allow create, update: if signedIn() && request.auth.uid == uid
