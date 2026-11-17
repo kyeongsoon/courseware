@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Pencil, Search, Trash2, UserMinus, UserPlus, X } from 'lucide-react';
 import { useStudents } from '../useStudents';
 import { assignStudents, deleteClass, normalizeClassName, renameClass, useClasses } from '../classes';
 
 export default function ClassDetailPage() {
   const { classId } = useParams();
-  const navigate = useNavigate();
   const { classes, loading: classesLoading } = useClasses();
   const { students, loading } = useStudents();
 
@@ -85,10 +84,9 @@ export default function ClassDetailPage() {
 
   const onDelete = () => {
     if (!confirm(`'${cls.name}' 반을 삭제할까요?\n소속 학생 ${members.length}명은 '반 없음'이 되고, 학생 계정은 지워지지 않아요.`)) return;
-    run(async () => {
-      await deleteClass(classId, members.map((s) => s.uid));
-      navigate('/teacher/classes', { replace: true });
-    });
+    // 반이 사라지면 위의 <Navigate> 가 목록으로 보내 줌. 여기서 또 이동하면,
+    // 삭제가 끝나기 전에 다른 메뉴를 누른 경우 반 목록으로 되돌려 버림
+    run(() => deleteClass(classId, members.map((s) => s.uid)));
   };
 
   return (

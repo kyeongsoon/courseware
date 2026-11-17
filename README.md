@@ -3,7 +3,7 @@
 학생과 함께 수업하는 정보교과 웹 코스웨어입니다. (Vite + React + Firebase)
 
 - 전체 개발 로드맵: [docs/GUIDE.md](docs/GUIDE.md)
-- 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**, **③ 수업(단원·차시)**
+- 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**, **③ 수업(단원·차시)**, **④ 실시간 수업 모드**
   - 교사가 학생 계정을 한꺼번에 생성 (학번 = 아이디, 초기 비밀번호 자동 생성 + CSV 저장)
   - 학생은 첫 로그인 때 비밀번호 변경
   - 교사는 Google 또는 이메일 계정으로 로그인
@@ -96,6 +96,22 @@ firebase deploy --only firestore:rules
 학생은 홈에서 자기 반에 공개된 차시만 단원별로 보고, 수업 화면 아래 **이전/다음**으로 넘깁니다.
 공개되지 않은 차시는 주소를 알아도 열리지 않습니다 (보안 규칙). 반을 삭제하면 그 반은 차시 공개 목록에서도 자동으로 빠집니다.
 
+## 5-3. 실시간 수업 (교사 화면 따라오기)
+
+1. 교사가 수업 화면(차시 보기)에서 반을 고르고 **실시간 수업 시작**을 누릅니다.
+2. 그 반 학생은 어느 화면에 있든 교사가 보고 있는 차시로 자동으로 넘어갑니다. 교사가 다른 차시로 가면 학생도 따라옵니다.
+   - 공개하지 않은 차시도 수업 중에는 그 반 학생에게 보이고, 수업을 끝내면 다시 닫힙니다.
+3. **영상 맞추기**: 교사가 YouTube 영상을 재생·일시정지·이동하면 학생 영상도 똑같이 움직입니다 (학생 쪽 조작 버튼은 숨김).
+   - 브라우저 정책상 학생이 화면을 한 번도 누르지 않았으면 소리 없이 재생됩니다. 학생이 **수업 참여**(또는 **소리 켜기**)를 누르면 소리가 납니다.
+   - 학교 인터넷이 걱정되면 막대의 **영상: 교사 화면(앞 화면)만**을 고르세요. 학생 화면에는 영상 대신 안내만 나옵니다.
+4. 교사 화면 위쪽 막대에서 **접속 인원**, **✋ 손든 학생**, **다 했어요 n/접속 인원**을 보고, **학생** 버튼으로 명단을 펼쳐 손을 내려 줄 수 있습니다.
+5. **따라오기**를 끄면 학생이 자유롭게 볼 수 있고, 다시 켜면 교사 화면으로 돌아옵니다. **끝내기**로 수업을 마칩니다.
+
+알아 둘 점
+- 웹사이트라서 학생이 다른 탭·앱으로 가는 것까지는 막을 수 없습니다. 우리 사이트 안에서만 교사 화면으로 돌려보냅니다.
+- 영상 위치는 교사·학생 기기의 시계를 기준으로 맞추므로, 기기 시계가 크게 틀리면 몇 초 어긋날 수 있습니다 (2초 넘게 어긋나면 다시 맞춤).
+- 학생 기기는 1분마다 접속 신호를 보냅니다. 30명이 50분 수업하면 쓰기 약 1,500회로, 무료 한도(하루 2만 회) 안에서 하루 5~6교시 정도 쓸 수 있습니다.
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -165,6 +181,13 @@ lessons/{lessonId}   // 차시
   links        // [{ label, url }]
   openClassIds // 공개할 반 ID 목록 (비어 있으면 비공개)
   teacherUid, createdAt, updatedAt
+
+live/{classId}       // 실시간 수업 (반마다 하나, 교사만 씀)
+  active, className, lessonId, follow, videoMode ('sync' | 'teacher')
+  video        // { videoId, state: 'playing'|'paused', time, at } 교사 영상 상태
+  teacherUid, startedAt, updatedAt
+live/{classId}/members/{uid}   // 학생 본인만 씀
+  name, studentId, lastSeen, hand, doneLessonId
 ```
 
 ## 폴더 구조
@@ -186,6 +209,10 @@ src/
   pages/LessonViewPage.jsx    수업 화면 (영상, 본문, 자료, 이전/다음)
   components/LessonBody.jsx   본문 표시 (주소 자동 링크, HTML 해석 안 함)
   lessons.js                  단원·차시 데이터, 주소 검사, YouTube 주소 해석
+  live.js, youtube.js         실시간 수업 데이터, YouTube 플레이어 불러오기
+  contexts/LiveContext.jsx    실시간 수업 상태 (교사 진행·학생 따라오기·접속 신호)
+  components/LiveBar.jsx      실시간 수업 막대 (교사 조작·학생 손들기), 시작 버튼
+  components/LessonVideo.jsx  수업 영상 (수업 중에는 교사 영상에 맞춰 재생)
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙

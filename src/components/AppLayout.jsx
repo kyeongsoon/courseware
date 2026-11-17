@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import LiveBar from './LiveBar';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 
@@ -182,6 +183,7 @@ export default function AppLayout() {
             <span className="avatar">{initial}</span>
           </div>
         </header>}
+        {!bare && <LiveBar />}
         <main className="content-body">
           <Outlet />
         </main>

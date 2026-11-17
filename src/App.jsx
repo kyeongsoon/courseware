@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { LiveProvider } from './contexts/LiveContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
 import LoginPage from './pages/LoginPage';
@@ -19,6 +20,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <LiveProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/profile-setup" element={<ProtectedRoute><ProfileSetupPage /></ProtectedRoute>} />
@@ -41,6 +43,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </LiveProvider>
       </BrowserRouter>
     </AuthProvider>
   );
