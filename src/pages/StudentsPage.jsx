@@ -1,21 +1,27 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, UserPlus } from 'lucide-react';
 import { useStudents } from '../useStudents';
 import { resetStudentPassword } from '../studentAccounts';
+import { useClasses } from '../classes';
 
 // Cloud Functions 배포(Blaze 요금제) 후 .env.local 에 VITE_ENABLE_PASSWORD_RESET=true 로 켜기
 const PASSWORD_RESET_ENABLED = import.meta.env.VITE_ENABLE_PASSWORD_RESET === 'true';
 
 export default function StudentsPage() {
   const { students, loading, error, reload } = useStudents();
+  const { classes } = useClasses();
+  const classNameOf = useMemo(() => Object.fromEntries(classes.map((c) => [c.id, c.name])), [classes]);
   const [q, setQ] = useState('');
+  const [classFilter, setClassFilter] = useState('all'); // 'all' | 'none' | classId
   const [resetting, setResetting] = useState(null);
   const [resetDone, setResetDone] = useState({});
   const [resetError, setResetError] = useState('');
 
   const k = q.trim();
-  const shown = k ? students.filter((u) => u.studentId?.includes(k) || u.displayName?.includes(k)) : students;
+  const shown = students
+    .filter((u) => classFilter === 'all' || (classFilter === 'none' ? !classNameOf[u.classId] : u.classId === classFilter))
+    .filter((u) => !k || u.studentId?.includes(k) || u.displayName?.includes(k));
 
   const onReset = async (u) => {
     if (!confirm(`${u.studentId} ${u.displayName} 학생의 비밀번호를 초기화할까요?`)) return;
@@ -35,8 +41,13 @@ export default function StudentsPage() {
   return (
     <section className="panel">
       <div className="panel-head">
-        <h2>전체 {students.length}명</h2>
+        <h2>{shown.length === students.length ? `전체 ${students.length}명` : `${shown.length}명 / 전체 ${students.length}명`}</h2>
         <div className="row">
+          <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} aria-label="반 필터">
+            <option value="all">모든 반</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            <option value="none">반 없음</option>
+          </select>
           <label className="search inline">
             <Search size={18} />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="학번·이름 검색" />
@@ -57,13 +68,14 @@ export default function StudentsPage() {
         <div className="table-wrap">
           <table>
             <thead>
-              <tr><th>학번</th><th>이름</th><th>비밀번호 변경</th>{PASSWORD_RESET_ENABLED && <th>비밀번호 초기화</th>}</tr>
+              <tr><th>학번</th><th>이름</th><th>반</th><th>비밀번호 변경</th>{PASSWORD_RESET_ENABLED && <th>비밀번호 초기화</th>}</tr>
             </thead>
             <tbody>
               {shown.map((u) => (
                 <tr key={u.uid}>
                   <td>{u.studentId ?? '-'}</td>
                   <td>{u.displayName}</td>
+                  <td>{classNameOf[u.classId] ?? <span className="muted">반 없음</span>}</td>
                   <td>
                     {u.mustChangePassword
                       ? <span className="tag warn">아직 안 함</span>

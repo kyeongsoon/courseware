@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toKoreanMessage } from '../authErrors';
 
 export default function LoginPage() {
   const { user, loginWithGoogle, loginWithId } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname ?? '/';
 
@@ -20,8 +19,9 @@ export default function LoginPage() {
     setError('');
     setBusy(true);
     try {
+      // 이동은 위의 `if (user) <Navigate>` 가 맡음. 여기서 또 이동하면 로그인 직후 다른 메뉴를 눌렀을 때
+      // 늦게 끝난 로그인 처리가 화면을 홈으로 되돌려 버림
       await fn();
-      navigate(from, { replace: true });
     } catch (err) {
       setError(toKoreanMessage(err));
     } finally {

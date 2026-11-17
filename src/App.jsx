@@ -9,6 +9,8 @@ import StudentsPage from './pages/StudentsPage';
 import TeacherAccountsPage from './pages/TeacherAccountsPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import HelpPage from './pages/HelpPage';
+import ClassesPage from './pages/ClassesPage';
+import ClassDetailPage from './pages/ClassDetailPage';
 
 export default function App() {
   return (
@@ -23,6 +25,8 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/help" element={<HelpPage />} />
+            <Route path="/teacher/classes" element={<ProtectedRoute requireTeacher><ClassesPage /></ProtectedRoute>} />
+            <Route path="/teacher/classes/:classId" element={<ProtectedRoute requireTeacher><ClassDetailPage /></ProtectedRoute>} />
             <Route path="/teacher/students" element={<ProtectedRoute requireTeacher><StudentsPage /></ProtectedRoute>} />
             <Route path="/teacher/accounts" element={<ProtectedRoute requireTeacher><TeacherAccountsPage /></ProtectedRoute>} />
             <Route path="/teacher" element={<Navigate to="/teacher/students" replace />} />

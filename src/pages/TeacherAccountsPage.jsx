@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Download, Eye, UserPlus } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { createStudentAccounts, downloadCsv, parseStudentList } from '../studentAccounts';
+import { useClasses } from '../classes';
 
 const SAMPLE = `30201,김민준
 30202,이서연
@@ -14,6 +15,8 @@ export default function TeacherAccountsPage() {
   const [preview, setPreview] = useState([]);
   const [results, setResults] = useState([]);
   const [progress, setProgress] = useState(null);
+  const { classes } = useClasses();
+  const [classId, setClassId] = useState('');
 
   const valid = preview.filter((p) => !p.error);
   const created = results.filter((r) => r.ok).length;
@@ -27,7 +30,7 @@ export default function TeacherAccountsPage() {
     if (!valid.length) return;
     if (!confirm(`학생 계정 ${valid.length}개를 만들까요?`)) return;
     setProgress({ done: 0, total: valid.length });
-    const res = await createStudentAccounts(valid, user.uid, (done, total) => setProgress({ done, total }));
+    const res = await createStudentAccounts(valid, user.uid, (done, total) => setProgress({ done, total }), classId || null);
     setResults(res);
     setPreview([]);
     setText('');
@@ -43,6 +46,13 @@ export default function TeacherAccountsPage() {
           세 번째 칸에 비밀번호를 쓰면 그 값을, 비우면 8자리 초기 비밀번호를 자동으로 만듭니다.
           학생은 <b>학번을 아이디</b>로 로그인하고, 첫 로그인 때 비밀번호를 바꿉니다.
         </p>
+        <label className="inline-label">
+          배정할 반
+          <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <option value="">나중에 배정 (반 관리에서 학번으로 자동 배정 가능)</option>
+            {classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </label>
         <textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder={SAMPLE} />
         <div className="row">
           <button className="btn" onClick={onPreview} disabled={!text.trim() || progress}>

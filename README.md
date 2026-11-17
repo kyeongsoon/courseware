@@ -3,7 +3,7 @@
 학생과 함께 수업하는 정보교과 웹 코스웨어입니다. (Vite + React + Firebase)
 
 - 전체 개발 로드맵: [docs/GUIDE.md](docs/GUIDE.md)
-- 현재 구현: **① Firebase Authentication + Firestore 로그인**
+- 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**
   - 교사가 학생 계정을 한꺼번에 생성 (학번 = 아이디, 초기 비밀번호 자동 생성 + CSV 저장)
   - 학생은 첫 로그인 때 비밀번호 변경
   - 교사는 Google 또는 이메일 계정으로 로그인
@@ -72,6 +72,16 @@ firebase deploy --only firestore:rules
 - Firebase는 같은 IP에서 시간당 만들 수 있는 계정 수를 제한합니다. 한 번에 한 반(30명 안팎)씩 만드세요.
 - 학생이 비밀번호를 잊으면 아래 **6. 비밀번호 초기화**를 사용하세요.
 
+## 5-1. 반(학급) 관리 (교사)
+
+사이드바 **반 관리**에서:
+- **반 만들기**: 이름(예: `3학년 2반`)을 입력해 반을 만듭니다.
+- **학번으로 자동 배정**: 반이 없는 학생을 학번 앞자리로 나눠 한 번에 배정합니다. (`30215` → `3학년 2반`, `2103` → `2학년 1반`) 같은 이름의 반이 없으면 새로 만듭니다.
+- 반을 누르면 **소속 학생 목록**, **빼기**, **학생 추가**(체크해서 여러 명 한 번에, 다른 반 학생은 옮겨짐), **이름 바꾸기**, **반 삭제**를 할 수 있습니다.
+  반을 삭제해도 학생 계정은 지워지지 않고 '반 없음'이 됩니다.
+- **계정 만들기**에서 "배정할 반"을 고르면 계정을 만들면서 바로 반에 넣을 수 있습니다.
+- 학생은 홈에서 자기 반 이름을 볼 수 있고, 스스로 반을 바꿀 수는 없습니다 (보안 규칙).
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -125,8 +135,13 @@ users/{uid}
   loginId      // 로그인 아이디 (교사가 만든 계정)
   studentId    // 학번, 예: "30215"
   role         // "student" | "teacher"
+  classId      // 소속 반 (classes 문서 ID, 없으면 null)
   mustChangePassword  // 초기 비밀번호를 아직 안 바꿨으면 true
   createdBy, createdAt, lastLoginAt
+
+classes/{classId}
+  name         // 예: "3학년 2반"
+  teacherUid, createdAt
 ```
 
 ## 폴더 구조
@@ -140,6 +155,9 @@ src/
   pages/ProfileSetupPage.jsx  이름·학번 입력 (Google 첫 로그인 시)
   pages/DashboardPage.jsx     로그인 후 첫 화면
   pages/TeacherPage.jsx       교사 전용: 학생 계정 일괄 생성, 학생 명단
+  pages/ClassesPage.jsx       교사 전용: 반 목록, 반 만들기, 학번으로 자동 배정
+  pages/ClassDetailPage.jsx   교사 전용: 반 소속 학생, 추가·빼기, 이름 바꾸기, 삭제
+  classes.js                  반 데이터 (구독, 생성, 배정, 삭제)
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙
