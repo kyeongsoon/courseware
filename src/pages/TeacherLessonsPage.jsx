@@ -71,6 +71,7 @@ function UnitPanel({ unit, lessons, index, units, classNameOf, busy, run }) {
               <span className="lesson-no">{i + 1}차시</span>
               <div className="lesson-main">
                 <Link to={`/lessons/${l.id}`} className="lesson-title">{l.title}</Link>
+                {l.slideCount > 0 && <span className="muted small">슬라이드 {l.slideCount}장</span>}
                 <ClassChips ids={l.openClassIds ?? []} classNameOf={classNameOf} />
               </div>
               <div className="row nowrap">

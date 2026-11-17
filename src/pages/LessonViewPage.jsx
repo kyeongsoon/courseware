@@ -8,6 +8,7 @@ import { useClasses } from '../classes';
 import { groupByUnit, isSafeUrl, useLessons, useUnits, youTubeId } from '../lessons';
 import LessonBody from '../components/LessonBody';
 import LessonVideo from '../components/LessonVideo';
+import SlideViewer from '../components/SlideViewer';
 import { LiveStart } from '../components/LiveBar';
 
 export default function LessonViewPage() {
@@ -84,6 +85,8 @@ export default function LessonViewPage() {
         {lesson.summary && <p className="lesson-summary">{lesson.summary}</p>}
 
         {isTeacher && <LiveStart lesson={lesson} classes={classes} />}
+
+        {lesson.slideCount > 0 && <SlideViewer lessonId={lesson.id} count={lesson.slideCount} />}
 
         {videoId && <LessonVideo videoId={videoId} lessonId={lesson.id} title={lesson.title} />}
 

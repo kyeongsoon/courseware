@@ -12,7 +12,7 @@ import { db } from './firebase';
 
 /**
  * live/{classId}  반마다 하나
- *   { active, classId, className, lessonId, follow, videoMode: 'sync'|'teacher',
+ *   { active, classId, className, lessonId, slide(지금 슬라이드 번호), follow, videoMode: 'sync'|'teacher',
  *     video: { videoId, state: 'playing'|'paused', time, at } | null,
  *     teacherUid, startedAt, updatedAt }
  * live/{classId}/members/{uid}  학생 본인이 씀
@@ -43,6 +43,7 @@ export async function startLive({ classId, className, lessonId, teacherUid }) {
     follow: true,
     videoMode: 'sync',
     video: null,
+    slide: 0,
     teacherUid,
     startedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),

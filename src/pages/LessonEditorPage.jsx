@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
-import { ArrowLeft, Plus, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, FileUp, Plus, Presentation, Save, Trash2, X } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useClasses } from '../classes';
 import {
   LIMITS, cleanLesson, createLesson, deleteLesson, updateLesson, useLessons, useUnits, validateLesson, youTubeId,
 } from '../lessons';
+import { SLIDE_LIMITS, deleteAllSlides, pdfToSlides, saveSlides } from '../slides';
 
 const EMPTY = { unitId: '', title: '', summary: '', body: '', videoUrl: '', links: [], openClassIds: [] };
 
@@ -24,6 +25,11 @@ export default function LessonEditorPage() {
   const [form, setForm] = useState({ ...EMPTY, unitId: params.get('unit') ?? '' });
   const [originalUnitId, setOriginalUnitId] = useState('');
   const [loaded, setLoaded] = useState(isNew);
+  // 슬라이드: 저장돼 있는 것 / 새로 고른 PDF 를 변환한 것 / 지우기 예약
+  const [savedSlides, setSavedSlides] = useState({ count: 0, name: '' });
+  const [pendingSlides, setPendingSlides] = useState(null); // { slides, name }
+  const [removeSlides, setRemoveSlides] = useState(false);
+  const [slideMsg, setSlideMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -38,6 +44,7 @@ export default function LessonEditorPage() {
           videoUrl: d.videoUrl ?? '', links: d.links ?? [], openClassIds: d.openClassIds ?? [],
         });
         setOriginalUnitId(d.unitId ?? '');
+        setSavedSlides({ count: d.slideCount ?? 0, name: d.slidesName ?? '' });
         setLoaded(true);
       })
       .catch((e) => setErr(`불러오기 실패: ${e.code ?? e.message}`));
@@ -66,6 +73,25 @@ export default function LessonEditorPage() {
 
   const videoId = youTubeId(form.videoUrl.trim());
 
+  const onPickPdf = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr('');
+    setBusy(true);
+    try {
+      const slides = await pdfToSlides(file, ({ done, total }) => setSlideMsg(`PDF를 슬라이드로 바꾸는 중… ${done + 1} / ${total}`));
+      setPendingSlides({ slides, name: file.name });
+      setRemoveSlides(false);
+      setSlideMsg('');
+    } catch (e2) {
+      setSlideMsg('');
+      setErr(e2.message?.includes('Invalid PDF') ? 'PDF 파일을 읽지 못했어요. 파일이 손상됐는지 확인해 주세요.' : e2.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onSave = async (e) => {
     e.preventDefault();
     const data = cleanLesson(form);
@@ -77,8 +103,16 @@ export default function LessonEditorPage() {
     setBusy(true);
     try {
       const inTarget = lessons.filter((l) => l.unitId === data.unitId && l.id !== lessonId);
-      if (isNew) await createLesson(data, inTarget, user.uid);
+      let id = lessonId;
+      if (isNew) id = (await createLesson(data, inTarget, user.uid)).id;
       else await updateLesson(lessonId, data, { movedToUnitLessons: data.unitId !== originalUnitId ? inTarget : undefined });
+      if (pendingSlides) {
+        await saveSlides(id, pendingSlides.slides, { oldCount: savedSlides.count, name: pendingSlides.name }, ({ done, total }) =>
+          setSlideMsg(`슬라이드 저장 중… ${done + 1} / ${total}`),
+        );
+      } else if (removeSlides) {
+        await deleteAllSlides(id);
+      }
       navigate('/teacher/lessons');
     } catch (e2) {
       setErr(`저장 실패: ${e2.code ?? e2.message}`);
@@ -90,6 +124,7 @@ export default function LessonEditorPage() {
     if (!confirm(`'${form.title}' 차시를 삭제할까요? 되돌릴 수 없어요.`)) return;
     setBusy(true);
     try {
+      if (savedSlides.count) await deleteAllSlides(lessonId, { updateLesson: false });
       await deleteLesson(lessonId);
       navigate('/teacher/lessons', { replace: true });
     } catch (e2) {
@@ -143,6 +178,37 @@ export default function LessonEditorPage() {
             />
             <span className="muted small right-note">{form.body.length.toLocaleString()} / {LIMITS.body.toLocaleString()}자</span>
           </label>
+        </section>
+
+        <section className="panel">
+          <h2>슬라이드 (PPT)</h2>
+          <p className="muted small">
+            PowerPoint에서 <b>파일 → 내보내기 → PDF</b>로 저장한 파일을 올리세요. 수업 화면에서 한 장씩 넘겨 볼 수 있고,
+            실시간 수업 중에는 선생님이 넘기면 학생 화면도 같이 넘어가요. (애니메이션은 빠져요, 최대 {SLIDE_LIMITS.maxPages}장)
+          </p>
+          {pendingSlides ? (
+            <div className="slide-file">
+              <Presentation size={20} />
+              <span><b>{pendingSlides.name}</b> · {pendingSlides.slides.length}장 <span className="muted">(저장하면 올라가요)</span></span>
+              <button type="button" className="btn small" onClick={() => setPendingSlides(null)}><X size={16} /> 취소</button>
+            </div>
+          ) : savedSlides.count > 0 && !removeSlides ? (
+            <div className="slide-file">
+              <Presentation size={20} />
+              <span><b>{savedSlides.name || '슬라이드'}</b> · {savedSlides.count}장</span>
+              <button type="button" className="btn small danger" onClick={() => setRemoveSlides(true)}><Trash2 size={16} /> 슬라이드 빼기</button>
+            </div>
+          ) : removeSlides ? (
+            <div className="slide-file">
+              <span className="muted">저장하면 슬라이드가 빠져요.</span>
+              <button type="button" className="btn small" onClick={() => setRemoveSlides(false)}>되돌리기</button>
+            </div>
+          ) : null}
+          <label className="btn file-btn">
+            <FileUp size={18} /> {savedSlides.count || pendingSlides ? 'PDF 바꾸기' : 'PDF 올리기'}
+            <input type="file" accept="application/pdf,.pdf" onChange={onPickPdf} disabled={busy} aria-label="슬라이드 PDF 파일" />
+          </label>
+          {slideMsg && <p className="info">{slideMsg}</p>}
         </section>
 
         <section className="panel">

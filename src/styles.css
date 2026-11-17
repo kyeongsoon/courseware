@@ -346,3 +346,21 @@ a.lesson-title:hover { text-decoration: underline; }
   .live-bar { margin: 0 16px 12px; top: 64px; }
   .live-bar select { max-width: 100%; }
 }
+
+/* ───── 슬라이드 ───── */
+.slides { display: flex; flex-direction: column; gap: 6px; background: #18181b; border-radius: 12px; overflow: hidden; }
+.slides-loading { color: #a1a1aa; padding: 60px 16px; text-align: center; }
+.slide-stage { display: grid; place-items: center; background: #18181b; cursor: pointer; user-select: none; }
+.slide-stage img { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; }
+.slide-bar { display: flex; align-items: center; gap: 6px; padding: 4px 10px 8px; color: #e4e4e7; }
+.slide-bar .icon-btn { color: #e4e4e7; }
+.slide-bar .icon-btn:hover:not(:disabled) { background: #27272a; color: #fff; }
+.slide-count { font-variant-numeric: tabular-nums; min-width: 64px; text-align: center; font-weight: 600; }
+.slide-live { display: inline-flex; align-items: center; gap: 4px; font-size: 0.82rem; color: #fda4af; }
+.slides.is-full { border-radius: 0; height: 100vh; }
+.slides.is-full .slide-stage { flex: 1; min-height: 0; }
+.slides.is-full .slide-stage img { max-height: 100%; height: 100%; width: auto; max-width: 100%; }
+.slide-file { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 12px; background: var(--bg); border-radius: 10px; }
+.slide-file svg { color: var(--primary-text); }
+.file-btn { flex-direction: row; align-self: flex-start; position: relative; overflow: hidden; cursor: pointer; font-weight: 500; color: var(--text); }
+.file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
