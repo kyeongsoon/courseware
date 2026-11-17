@@ -74,7 +74,9 @@ service cloud.firestore {
           && isStr(d.videoUrl, 0, 500)
           && d.links is list && d.links.size() <= 20
           && d.openClassIds is list && d.openClassIds.size() <= 100
-          && d.order is number;
+          && d.order is number
+          && d.get('slideCount', 0) is int && d.get('slideCount', 0) >= 0 && d.get('slideCount', 0) <= 150
+          && isStr(d.get('slidesName', ''), 0, 100);
       }
       // 실시간 수업 중이면, 공개하지 않은 차시라도 지금 띄운 차시는 그 반 학생이 볼 수 있음
       function isLiveLessonForMyClass() {
@@ -88,6 +90,22 @@ service cloud.firestore {
             && (myClassId() in resource.data.openClassIds || isLiveLessonForMyClass()));
       allow create, update: if isTeacher() && validLesson();
       allow delete: if isTeacher();
+
+      // 슬라이드 그림: 차시를 볼 수 있는 사람만 보기, 교사만 올리기
+      match /slides/{slideId} {
+        function lessonData() {
+          return get(/databases/$(database)/documents/lessons/$(lessonId)).data;
+        }
+        allow read: if isTeacher()
+          || (signedIn() && myClassId() != null
+              && (myClassId() in lessonData().openClassIds || isLiveLessonForMyClass()));
+        allow create, update: if isTeacher()
+          && request.resource.data.index is int
+          && request.resource.data.image is string
+          && request.resource.data.image.size() <= 1000000
+          && request.resource.data.image.matches('^data:image/(webp|jpeg|png);base64,.*');
+        allow delete: if isTeacher();
+      }
     }
 
     // 실시간 수업: 반마다 문서 하나. 교사가 쓰고, 그 반 학생은 읽기만
@@ -97,6 +115,7 @@ service cloud.firestore {
         return d.active is bool
           && d.follow is bool
           && d.videoMode in ['sync', 'teacher']
+          && d.get('slide', 0) is int && d.get('slide', 0) >= 0
           && isStr(d.lessonId, 0, 100)
           && d.teacherUid == request.auth.uid;
       }

@@ -45,7 +45,7 @@ function useTeacherLive(enabled, uid) {
   const viewing = lessonIdFromPath(pathname);
   useEffect(() => {
     if (classId && viewing && session.lessonId !== viewing) {
-      updateLive(classId, { lessonId: viewing, video: null }).catch(() => {});
+      updateLive(classId, { lessonId: viewing, video: null, slide: 0 }).catch(() => {});
     }
   }, [classId, viewing, session?.lessonId]);
 
