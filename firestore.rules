@@ -76,10 +76,51 @@ service cloud.firestore {
           && d.openClassIds is list && d.openClassIds.size() <= 100
           && d.order is number;
       }
+      // 실시간 수업 중이면, 공개하지 않은 차시라도 지금 띄운 차시는 그 반 학생이 볼 수 있음
+      function isLiveLessonForMyClass() {
+        let livePath = /databases/$(database)/documents/live/$(myClassId());
+        return exists(livePath)
+          && get(livePath).data.active == true
+          && get(livePath).data.lessonId == lessonId;
+      }
       allow read: if isTeacher()
-        || (signedIn() && myClassId() != null && myClassId() in resource.data.openClassIds);
+        || (signedIn() && myClassId() != null
+            && (myClassId() in resource.data.openClassIds || isLiveLessonForMyClass()));
       allow create, update: if isTeacher() && validLesson();
       allow delete: if isTeacher();
+    }
+
+    // 실시간 수업: 반마다 문서 하나. 교사가 쓰고, 그 반 학생은 읽기만
+    match /live/{classId} {
+      function validLive() {
+        let d = request.resource.data;
+        return d.active is bool
+          && d.follow is bool
+          && d.videoMode in ['sync', 'teacher']
+          && isStr(d.lessonId, 0, 100)
+          && d.teacherUid == request.auth.uid;
+      }
+      allow read: if isTeacher() || (signedIn() && myClassId() == classId);
+      allow create, update: if isTeacher() && validLive();
+      allow delete: if isTeacher();
+
+      // 접속·손들기·다 했어요: 학생은 자기 문서만, 자기 반 수업에만 씀
+      match /members/{uid} {
+        function validMember() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['name', 'studentId', 'lastSeen', 'hand', 'doneLessonId'])
+            && isStr(d.name, 0, 50)
+            && isStr(d.studentId, 0, 20)
+            && d.lastSeen == request.time
+            && d.hand is bool
+            && isStr(d.doneLessonId, 0, 100);
+        }
+        allow read: if isTeacher() || (signedIn() && request.auth.uid == uid);
+        allow create, update: if signedIn() && request.auth.uid == uid
+          && myClassId() == classId && validMember();
+        // 교사: 손 내리기, 새 수업 시작 때 지난 기록 지우기
+        allow update, delete: if isTeacher();
+      }
     }
 
     // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)

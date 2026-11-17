@@ -7,6 +7,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { useClasses } from '../classes';
 import { groupByUnit, isSafeUrl, useLessons, useUnits, youTubeId } from '../lessons';
 import LessonBody from '../components/LessonBody';
+import LessonVideo from '../components/LessonVideo';
+import { LiveStart } from '../components/LiveBar';
 
 export default function LessonViewPage() {
   const { lessonId } = useParams();
@@ -81,17 +83,9 @@ export default function LessonViewPage() {
         )}
         {lesson.summary && <p className="lesson-summary">{lesson.summary}</p>}
 
-        {videoId && (
-          <div className="video">
-            <iframe
-              src={`https://www.youtube-nocookie.com/embed/${videoId}`}
-              title={`${lesson.title} 영상`}
-              allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              referrerPolicy="strict-origin-when-cross-origin"
-            />
-          </div>
-        )}
+        {isTeacher && <LiveStart lesson={lesson} classes={classes} />}
+
+        {videoId && <LessonVideo videoId={videoId} lessonId={lesson.id} title={lesson.title} />}
 
         <LessonBody text={lesson.body} />
 
