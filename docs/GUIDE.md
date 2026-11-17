@@ -18,6 +18,7 @@
 1. **① 로그인 – Firebase Authentication + Firestore** ← 이번 작업
    - 교사가 학생 계정 일괄 생성 (학번=아이디), 학생은 첫 로그인 때 비밀번호 변경
    - 교사는 Google 또는 이메일로 로그인
+   - 교사가 학생 비밀번호 초기화 (Cloud Functions, Blaze 요금제)
    - 첫 로그인 시 `users/{uid}` 프로필 문서 자동 생성 (역할 `student`)
    - 이름·학번 미입력 학생은 프로필 입력 페이지로 이동
    - 교사 권한은 Firebase 콘솔에서 `role: "teacher"`로 직접 변경
@@ -41,7 +42,7 @@
 ## 4단계. 교사용 도구
 
 9. **실시간 수업 모드** – 교사가 현재 차시를 띄우면 학생 화면이 따라옴 (Firestore `onSnapshot`)
-10. **학생 비밀번호 초기화** – Cloud Functions(Blaze 요금제)로 교사가 앱에서 바로 초기화
+10. ~~학생 비밀번호 초기화~~ ✅ 완료 (Cloud Functions)
 11. **결과 분석** – 문항별 정답률, 학생별 진도, CSV 내보내기
 12. **(선택) AI 피드백** – 학생 코드에 대한 힌트 제공. 서버(Cloud Functions)에서만 API 키 사용
 

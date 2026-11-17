@@ -7,7 +7,8 @@ import {
   connectAuthEmulator,
 } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { app, db, useEmulator, AUTH_EMULATOR_URL } from './firebase';
+import { httpsCallable } from 'firebase/functions';
+import { app, db, functions, useEmulator, AUTH_EMULATOR_URL } from './firebase';
 
 /**
  * 학생은 이메일 대신 "아이디(보통 학번)"로 로그인합니다.
@@ -110,4 +111,20 @@ export function downloadCsv(rows, filename = `student-accounts-${new Date().toIS
   a.remove();
   // 바로 해제하면 일부 브라우저에서 파일 이름이 사라지므로 조금 뒤에 해제
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+/**
+ * 교사가 학생 비밀번호를 초기화 (Cloud Functions 필요 → Blaze 요금제)
+ * 새 임시 비밀번호를 돌려줍니다. 학생은 다음 로그인 때 다시 바꿔야 합니다.
+ */
+export async function resetStudentPassword(uid) {
+  try {
+    const { data } = await httpsCallable(functions, 'resetStudentPassword')({ uid });
+    return data.password;
+  } catch (err) {
+    if (err.code === 'functions/not-found' || err.code === 'functions/internal' || err.code === 'functions/unavailable') {
+      throw new Error('비밀번호 초기화 기능(Cloud Functions)이 아직 배포되지 않았어요. README의 "비밀번호 초기화" 항목을 확인해 주세요.');
+    }
+    throw new Error(err.message);
+  }
 }

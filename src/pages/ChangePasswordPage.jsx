@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { toKoreanMessage } from '../authErrors';
 
@@ -11,8 +11,12 @@ export default function ChangePasswordPage() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState(false);
 
   const forced = profile?.mustChangePassword;
+
+  // 변경 완료가 프로필에 반영된 뒤에 이동해야, 아직 true 인 값 때문에 다시 이 페이지로 돌아오지 않음
+  if (done && !forced) return <Navigate to="/" replace />;
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -23,10 +27,9 @@ export default function ChangePasswordPage() {
     setBusy(true);
     try {
       await changePassword(current, next);
-      navigate('/', { replace: true });
+      setDone(true);
     } catch (err) {
       setError(toKoreanMessage(err));
-    } finally {
       setBusy(false);
     }
   };

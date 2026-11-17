@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { createStudentAccounts, downloadCsv, parseStudentList } from '../studentAccounts';
+import { createStudentAccounts, downloadCsv, parseStudentList, resetStudentPassword } from '../studentAccounts';
 
 const SAMPLE = `30201,김민준
 30202,이서연
@@ -18,6 +18,9 @@ export default function TeacherPage() {
   const [preview, setPreview] = useState([]);
   const [results, setResults] = useState([]);
   const [progress, setProgress] = useState(null);
+  const [resetting, setResetting] = useState(null); // 초기화 중인 학생 uid
+  const [resetDone, setResetDone] = useState({}); // uid → 새 임시 비밀번호
+  const [resetError, setResetError] = useState('');
 
   const loadUsers = useCallback(() => {
     getDocs(query(collection(db, 'users'), orderBy('studentId')))
@@ -43,6 +46,21 @@ export default function TeacherPage() {
     setPreview([]);
     setProgress(null);
     loadUsers();
+  };
+
+  const onReset = async (u) => {
+    if (!confirm(`${u.studentId} ${u.displayName} 학생의 비밀번호를 초기화할까요?`)) return;
+    setResetError('');
+    setResetting(u.uid);
+    try {
+      const password = await resetStudentPassword(u.uid);
+      setResetDone((prev) => ({ ...prev, [u.uid]: password }));
+      loadUsers();
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetting(null);
+    }
   };
 
   const students = users.filter((u) => u.role !== 'teacher');
@@ -109,9 +127,10 @@ export default function TeacherPage() {
         <section className="panel">
           <h2>학생 명단 ({students.length}명)</h2>
           {listError && <p className="error">불러오기 실패: {listError}</p>}
+          {resetError && <p className="error">{resetError}</p>}
           <table>
             <thead>
-              <tr><th>학번</th><th>이름</th><th>첫 비밀번호 변경</th></tr>
+              <tr><th>학번</th><th>이름</th><th>비밀번호 변경</th><th>비밀번호 초기화</th></tr>
             </thead>
             <tbody>
               {students.map((u) => (
@@ -119,6 +138,15 @@ export default function TeacherPage() {
                   <td>{u.studentId ?? '-'}</td>
                   <td>{u.displayName}</td>
                   <td>{u.mustChangePassword ? '아직 안 함' : '완료'}</td>
+                  <td>
+                    {resetDone[u.uid] ? (
+                      <span>새 비밀번호: <code className="pw">{resetDone[u.uid]}</code></span>
+                    ) : (
+                      <button className="btn small" onClick={() => onReset(u)} disabled={resetting === u.uid}>
+                        {resetting === u.uid ? '초기화 중…' : '초기화'}
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

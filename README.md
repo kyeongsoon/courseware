@@ -70,13 +70,36 @@ firebase deploy --only firestore:rules
 **알아 둘 점**
 - 학생 아이디는 내부적으로 `학번@student.invalid` 형식의 가짜 이메일로 저장됩니다 (실제 메일 발송 없음, `.env.local` 의 `VITE_STUDENT_EMAIL_DOMAIN` 으로 변경 가능).
 - Firebase는 같은 IP에서 시간당 만들 수 있는 계정 수를 제한합니다. 한 번에 한 반(30명 안팎)씩 만드세요.
-- 무료(Spark) 요금제에서는 교사가 **학생 비밀번호를 앱에서 초기화할 수 없습니다.** 학생이 비밀번호를 잊으면
-  Firebase 콘솔 → Authentication 에서 그 학생을 삭제하고, Firestore `users` 에서 문서도 삭제한 뒤 다시 만들어 주세요.
-  (앱 안의 "비밀번호 초기화" 버튼은 Blaze 요금제 + Cloud Functions 가 필요해 다음 단계로 남겨 둠)
+- 학생이 비밀번호를 잊으면 아래 **6. 비밀번호 초기화**를 사용하세요.
+
+## 6. 학생 비밀번호 초기화 (교사)
+
+교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
+학생에게 알려 주면, 학생은 그 비밀번호로 로그인한 뒤 곧바로 새 비밀번호로 바꾸게 됩니다.
+(초기화 즉시 옛 비밀번호는 쓸 수 없고, 다른 기기의 로그인도 끊깁니다.)
+
+남의 비밀번호를 바꾸는 일은 보안상 브라우저에서 할 수 없어서 **Cloud Functions**(`functions/index.js`)를 씁니다.
+서버에서 "요청한 사람이 교사인지, 대상이 학생인지"를 확인한 뒤에만 바꿉니다.
+
+**배포 방법 (1회)**
+1. Firebase 콘솔 → 요금제를 **Blaze(종량제)** 로 변경 (Cloud Functions 배포에 필요, 카드 등록 필요)
+   - 월 200만 회 호출까지 무료라 학급 단위 사용은 사실상 0원입니다. 걱정되면 Google Cloud 결제 → **예산 알림**(예: 1,000원)을 설정하세요.
+2. 배포:
+
+```bash
+cd functions && npm install && cd ..
+```
+
+```bash
+firebase deploy --only functions
+```
+
+배포하지 않아도 나머지 기능은 모두 동작합니다. 그 경우 **초기화** 버튼을 누르면 "아직 배포되지 않았어요" 안내가 나오고,
+대신 Firebase 콘솔 → Authentication 에서 학생을 삭제하고 Firestore `users` 문서도 삭제한 뒤 다시 만들어 주면 됩니다.
 
 ## 로컬 테스트 (에뮬레이터, 실제 프로젝트 없이)
 
-Java가 필요합니다. 터미널 두 개에서:
+Java가 필요합니다. 처음 한 번 `cd functions && npm install` 후, 터미널 두 개에서:
 
 ```bash
 npm run emulators
@@ -112,4 +135,5 @@ src/
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙
+functions/index.js            Cloud Functions: 학생 비밀번호 초기화
 ```

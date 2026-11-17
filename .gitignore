@@ -8,3 +8,4 @@ dist
 # Firebase emulator logs
 firebase-debug.log
 firestore-debug.log
+functions/node_modules

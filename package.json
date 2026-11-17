@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-courseware",
+    "emulators": "firebase emulators:start --only auth,firestore,functions --project demo-courseware",
     "dev:emu": "VITE_USE_EMULATOR=true VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_AUTH_DOMAIN=localhost VITE_FIREBASE_PROJECT_ID=demo-courseware vite"
   },
   "dependencies": {

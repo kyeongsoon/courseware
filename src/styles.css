@@ -43,3 +43,4 @@ textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); bor
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 tr.bad td { color: var(--error); }
 .result { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.pw { background: #fef3c7; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
