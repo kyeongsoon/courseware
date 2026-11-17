@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isTeacher() {
+      return signedIn()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+
+    match /users/{uid} {
+      // 본인 문서 또는 교사만 읽기
+      allow get: if signedIn() && (request.auth.uid == uid || isTeacher());
+      allow list: if isTeacher();
+
+      // 본인 문서 생성: 역할은 반드시 student
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.role == 'student'
+        && request.resource.data.uid == uid;
+
+      // 본인 수정: role / uid / createdAt 은 변경 불가 (권한 상승 방지)
+      allow update: if signedIn() && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(['role', 'uid', 'createdAt']);
+
+      // 교사가 학생 계정 문서를 대신 생성 (역할은 student 만 가능)
+      allow create: if isTeacher() && request.resource.data.role == 'student';
+
+      // 교사는 학생 정보 수정 가능, 삭제는 교사만
+      allow update, delete: if isTeacher();
+    }
+
+    // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

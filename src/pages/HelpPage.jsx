@@ -1,0 +1,30 @@
+import { useAuth } from '../contexts/AuthContext';
+
+export default function HelpPage() {
+  const { isTeacher } = useAuth();
+  return (
+    <section className="panel help">
+      {isTeacher ? (
+        <>
+          <h2>선생님용 안내</h2>
+          <ol>
+            <li><b>계정 만들기</b>에서 <code>학번,이름</code> 을 한 줄에 한 명씩 붙여넣고 미리보기 → 계정 만들기</li>
+            <li>결과 화면에서 <b>CSV 다운로드</b>로 아이디·초기 비밀번호를 저장해 학생에게 나눠 주세요. (이 화면을 벗어나면 다시 볼 수 없어요)</li>
+            <li>학생은 학번으로 로그인하고, 첫 로그인 때 비밀번호를 바꿉니다. <b>학생 명단</b>에서 변경 여부를 확인할 수 있어요.</li>
+            <li>학생이 비밀번호를 잊으면 Firebase 콘솔에서 계정을 삭제하고 다시 만들어 주세요.</li>
+          </ol>
+        </>
+      ) : (
+        <>
+          <h2>학생용 안내</h2>
+          <ol>
+            <li>아이디는 <b>내 학번</b>이에요. 비밀번호는 선생님이 알려 준 초기 비밀번호예요.</li>
+            <li>처음 로그인하면 나만 아는 비밀번호로 바꿔야 해요. 6자 이상으로 정해 주세요.</li>
+            <li>비밀번호를 잊어버렸다면 선생님께 말씀해 주세요.</li>
+            <li>공용 컴퓨터에서는 수업이 끝나면 꼭 <b>로그아웃</b>하세요.</li>
+          </ol>
+        </>
+      )}
+    </section>
+  );
+}
