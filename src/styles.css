@@ -320,10 +320,18 @@ a.lesson-title:hover { text-decoration: underline; }
 .live-panel { border-top: 1px solid #fecdd3; margin-top: 10px; padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
 .member-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 6px; }
 .member { display: flex; align-items: center; gap: 8px; background: var(--surface); border-radius: 8px; padding: 6px 10px; font-size: 0.9rem; }
-.member.offline { opacity: 0.55; }
+.member.off { opacity: 0.55; }
+.member.away { box-shadow: inset 3px 0 0 #e11d48; }
 .member-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .presence { width: 8px; height: 8px; border-radius: 50%; background: #d4d4d8; flex: none; }
-.presence.on { background: var(--accent); }
+.presence.on { background: #16a34a; }
+.presence.away { background: #e11d48; box-shadow: 0 0 0 3px #fecdd3; }
+.presence.off { background: #d4d4d8; }
+.tag.away { background: #ffe4e6; color: #be123c; }
+.away-count { font-size: 0.78rem; color: var(--muted); }
+.live-stat.away { color: #be123c; font-weight: 700; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.legend .presence { margin-left: 6px; }
 .tag.hand { background: var(--warn-soft); color: var(--warn); border: none; cursor: pointer; }
 .btn.on-hand { background: var(--warn-soft); border-color: #fcd34d; color: var(--warn); }
 .btn.on-done { background: var(--primary-soft); border-color: var(--accent); color: var(--primary-text); }

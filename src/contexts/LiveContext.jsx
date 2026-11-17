@@ -4,7 +4,7 @@ import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
 import {
-  HEARTBEAT_MS, endLive, isOnline, lowerAllHands, lowerHand, startLive, touchMember, updateLive,
+  HEARTBEAT_MS, endLive, isOnline, isPageFocused, lowerAllHands, lowerHand, memberStatus, startLive, touchMember, updateLive,
 } from '../live';
 
 const LiveContext = createContext(null);
@@ -52,8 +52,9 @@ function useTeacherLive(enabled, uid) {
   const online = members.filter((m) => isOnline(m, now));
   return {
     session,
-    members: members.map((m) => ({ ...m, online: isOnline(m, now) })),
+    members: members.map((m) => ({ ...m, online: isOnline(m, now), status: memberStatus(m, now) })),
     onlineCount: online.length,
+    awayCount: members.filter((m) => memberStatus(m, now) === 'away').length,
     hands: members.filter((m) => m.hand),
     doneCount: session ? members.filter((m) => m.doneLessonId && m.doneLessonId === session.lessonId).length : 0,
   };
@@ -62,7 +63,7 @@ function useTeacherLive(enabled, uid) {
 // ── 학생: 내 반의 실시간 수업 ──
 function useStudentLive(enabled, uid, classId, profile) {
   const [live, setLive] = useState(null);
-  const [me, setMe] = useState({ hand: false, doneLessonId: '' });
+  const [me, setMe] = useState({ hand: false, doneLessonId: '', focused: true, awayCount: 0 });
   const [joinedKey, setJoinedKey] = useState(null);
   const meRef = useRef(me);
   meRef.current = me;
@@ -84,9 +85,15 @@ function useStudentLive(enabled, uid, classId, profile) {
     if (!active) return undefined;
     return onSnapshot(doc(db, 'live', classId, 'members', uid), (snap) => {
       const d = snap.data();
-      setMe({ hand: !!d?.hand, doneLessonId: d?.doneLessonId ?? '' });
+      // 손들기·다 했어요는 교사가 바꿀 수 있어서 서버 값을 따르고, 화면 보기 상태는 이 기기 값이 기준
+      setMe((m) => ({ ...m, hand: !!d?.hand, doneLessonId: d?.doneLessonId ?? '' }));
     }, () => {});
   }, [active, classId, uid]);
+
+  // 새 수업이 시작되면 다른 화면 횟수를 0부터
+  useEffect(() => {
+    setMe((m) => ({ ...m, awayCount: 0, focused: isPageFocused() }));
+  }, [sessionKey]);
 
   const write = useCallback(
     (patch) => {
@@ -96,6 +103,31 @@ function useStudentLive(enabled, uid, classId, profile) {
     },
     [classId, uid, profile?.displayName, profile?.studentId],
   );
+
+  // 다른 탭·앱으로 가거나 돌아오면 바로 알림
+  useEffect(() => {
+    if (!active) return undefined;
+    let timer = null;
+    const check = () => {
+      // blur 직후에는 activeElement 가 아직 안 바뀌어서, 한 박자 뒤에 확인
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const focused = isPageFocused();
+        if (focused === meRef.current.focused) return;
+        write({ focused, awayCount: meRef.current.awayCount + (focused ? 0 : 1) });
+      }, 50);
+    };
+    document.addEventListener('visibilitychange', check);
+    window.addEventListener('blur', check);
+    window.addEventListener('focus', check);
+    check();
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('visibilitychange', check);
+      window.removeEventListener('blur', check);
+      window.removeEventListener('focus', check);
+    };
+  }, [active, sessionKey, write]);
 
   // 접속 신호: 들어올 때 + 1분마다
   useEffect(() => {
