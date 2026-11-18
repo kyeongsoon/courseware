@@ -76,7 +76,8 @@ service cloud.firestore {
           && d.openClassIds is list && d.openClassIds.size() <= 100
           && d.order is number
           && d.get('slideCount', 0) is int && d.get('slideCount', 0) >= 0 && d.get('slideCount', 0) <= 150
-          && isStr(d.get('slidesName', ''), 0, 100);
+          && isStr(d.get('slidesName', ''), 0, 100)
+          && isStr(d.get('slidesVersion', ''), 0, 40);
       }
       // 실시간 수업 중이면, 공개하지 않은 차시라도 지금 띄운 차시는 그 반 학생이 볼 수 있음
       function isLiveLessonForMyClass() {

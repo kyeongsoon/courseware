@@ -10,8 +10,8 @@ import { useSlides } from '../slides';
  * - 실시간 수업 중 학생(따라오기 켬): 선생님이 넘기는 장을 보여 줌
  * 키보드 ← → ↑ ↓, PageUp/PageDown, 스페이스(발표용 리모컨) 지원
  */
-export default function SlideViewer({ lessonId, count }) {
-  const { slides, error } = useSlides(lessonId, count);
+export default function SlideViewer({ lessonId, count, version }) {
+  const { slides, error } = useSlides(lessonId, count, version);
   const live = useLive();
   const box = useRef(null);
   const [local, setLocal] = useState(0);

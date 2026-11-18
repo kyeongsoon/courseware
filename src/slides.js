@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { deckKey, getDeck, putDeck } from './slideCache';
 
 /**
  * lessons/{lessonId}/slides/{번호}  { index, image(data URL), w, h }
- * lessons/{lessonId}.slideCount, slidesName
+ * lessons/{lessonId}.slideCount, slidesName, slidesVersion(올릴 때마다 새 값 → 기기 보관본 갱신)
  *
  * PDF 를 교사 브라우저에서 장마다 그림(WebP, 안 되면 JPEG)으로 바꿔 Firestore 에 저장.
  * Firestore 문서 하나는 1MB 까지라, 한 장이 너무 크면 화질·크기를 낮춰 맞춤.
@@ -85,29 +86,48 @@ export async function saveSlides(lessonId, slides, { oldCount = 0, name = '' } =
     await setDoc(slideRef(lessonId, i), { index: i, ...slides[i] });
   }
   for (let i = slides.length; i < oldCount; i++) await deleteDoc(slideRef(lessonId, i));
-  await updateDoc(doc(db, 'lessons', lessonId), { slideCount: slides.length, slidesName: name.slice(0, 100) });
+  const version = Math.random().toString(36).slice(2, 12);
+  // 올린 사람 기기에는 바로 보관 (수업 화면에서 다시 받지 않게)
+  await putDeck(deckKey(lessonId, version), slides.map((s, index) => ({ index, ...s })));
+  await updateDoc(doc(db, 'lessons', lessonId), { slideCount: slides.length, slidesName: name.slice(0, 100), slidesVersion: version });
 }
 
 export async function deleteAllSlides(lessonId, { updateLesson = true } = {}) {
   const snap = await getDocs(slidesCol(lessonId));
   await Promise.all(snap.docs.map((d) => deleteDoc(d.ref)));
-  if (updateLesson) await updateDoc(doc(db, 'lessons', lessonId), { slideCount: 0, slidesName: '' });
+  if (updateLesson) await updateDoc(doc(db, 'lessons', lessonId), { slideCount: 0, slidesName: '', slidesVersion: '' });
 }
 
-// 슬라이드 실시간 구독 (교체하면 바로 반영)
-export function useSlides(lessonId, count) {
+/**
+ * 슬라이드 불러오기
+ * 1) 이 기기에 같은 버전이 보관돼 있으면 서버에서 받지 않고 그대로 씀
+ * 2) 없으면 서버에서 한 번 받아서 보관
+ * 교사가 PDF 를 바꾸면 차시의 slidesVersion 이 바뀌어 다시 받음
+ */
+export function useSlides(lessonId, count, version) {
   const [slides, setSlides] = useState([]);
   const [error, setError] = useState('');
   useEffect(() => {
-    if (!lessonId || !count) {
-      setSlides([]);
-      return undefined;
-    }
-    return onSnapshot(
-      query(slidesCol(lessonId), orderBy('index')),
-      (snap) => setSlides(snap.docs.map((d) => d.data())),
-      (err) => setError(err.code ?? err.message),
-    );
-  }, [lessonId, count]);
+    let cancelled = false;
+    setSlides([]);
+    setError('');
+    if (!lessonId || !count) return undefined;
+    (async () => {
+      const key = version ? deckKey(lessonId, version) : null;
+      const cached = key ? await getDeck(key) : null;
+      if (cached?.length === count) {
+        if (!cancelled) setSlides(cached);
+        return;
+      }
+      const snap = await getDocs(query(slidesCol(lessonId), orderBy('index')));
+      const fresh = snap.docs.map((d) => d.data());
+      if (cancelled) return;
+      setSlides(fresh);
+      if (key && fresh.length === count) putDeck(key, fresh);
+    })().catch((err) => !cancelled && setError(err.code ?? err.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [lessonId, count, version]);
   return { slides, error };
 }

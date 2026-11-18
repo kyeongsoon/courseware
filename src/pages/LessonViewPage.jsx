@@ -86,7 +86,7 @@ export default function LessonViewPage() {
 
         {isTeacher && <LiveStart lesson={lesson} classes={classes} />}
 
-        {lesson.slideCount > 0 && <SlideViewer lessonId={lesson.id} count={lesson.slideCount} />}
+        {lesson.slideCount > 0 && <SlideViewer lessonId={lesson.id} count={lesson.slideCount} version={lesson.slidesVersion} />}
 
         {videoId && <LessonVideo videoId={videoId} lessonId={lesson.id} title={lesson.title} />}
 
