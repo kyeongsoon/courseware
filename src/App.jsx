@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { LiveProvider } from './contexts/LiveContext';
+import { ClassProvider } from './contexts/ClassContext';
 import { FEATURES } from './features';
 import ProtectedRoute from './components/ProtectedRoute';
 import AppLayout from './components/AppLayout';
@@ -11,6 +12,11 @@ import StudentsPage from './pages/StudentsPage';
 import TeacherAccountsPage from './pages/TeacherAccountsPage';
 import ChangePasswordPage from './pages/ChangePasswordPage';
 import HelpPage from './pages/HelpPage';
+import NoticesPage from './pages/NoticesPage';
+import NoticeDetailPage from './pages/NoticeDetailPage';
+import PollsPage from './pages/PollsPage';
+import PollDetailPage from './pages/PollDetailPage';
+import CounselPage from './pages/CounselPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
 import TeacherLessonsPage from './pages/TeacherLessonsPage';
@@ -21,6 +27,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ClassProvider>
         <LiveProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -31,6 +38,12 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/change-password" element={<ChangePasswordPage />} />
             <Route path="/help" element={<HelpPage />} />
+            {/* 학급운영: 소통 */}
+            <Route path="/notices" element={<NoticesPage />} />
+            <Route path="/notices/:noticeId" element={<NoticeDetailPage />} />
+            <Route path="/polls" element={<PollsPage />} />
+            <Route path="/polls/:pollId" element={<PollDetailPage />} />
+            <Route path="/counsel" element={<CounselPage />} />
             {/* 수업·슬라이드·실시간 수업: FEATURES.lessons 가 꺼져 있으면 주소로 들어와도 홈으로 */}
             {FEATURES.lessons && (
               <>
@@ -50,6 +63,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </LiveProvider>
+        </ClassProvider>
       </BrowserRouter>
     </AuthProvider>
   );

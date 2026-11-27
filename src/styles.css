@@ -364,3 +364,52 @@ a.lesson-title:hover { text-decoration: underline; }
 .slide-file svg { color: var(--primary-text); }
 .file-btn { flex-direction: row; align-self: flex-start; position: relative; overflow: hidden; cursor: pointer; font-weight: 500; color: var(--text); }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* ───── 학급운영 ───── */
+.class-picker { flex-direction: row; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0 4px 0 10px; color: var(--primary-text); font-weight: 600; }
+.class-picker select { border: none; padding: 7px 6px; font-weight: 600; background: transparent; }
+.class-picker select:focus { outline: none; }
+.class-picker:focus-within { outline: 2px solid var(--accent); }
+.stack { display: flex; flex-direction: column; gap: 14px; }
+.stack-sm { display: flex; flex-direction: column; gap: 8px; }
+.grow { flex: 1; min-width: 0; }
+.check-line { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; }
+.item-list { list-style: none; margin: 0; padding: 0; }
+.item-list li + li { border-top: 1px solid var(--border); }
+.item-link { display: flex; align-items: center; gap: 10px; padding: 14px 6px; color: var(--text); text-decoration: none; border-radius: 8px; }
+.item-link:hover { background: var(--bg); }
+.item-list.compact .item-link { padding: 10px 6px; }
+.item-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.item-title { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pin { color: var(--warn); flex: none; }
+.tag.new { background: #fee2e2; color: #b91c1c; }
+.tag.info-tag { background: #dbeafe; color: #1d4ed8; }
+.notice-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.read-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.read-cols > div { display: flex; flex-direction: column; gap: 8px; }
+.pre { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; line-height: 1.7; }
+.bars { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.bar-label { display: flex; justify-content: space-between; gap: 8px; font-size: 0.95rem; margin-bottom: 4px; }
+.bar-label > span:first-child { display: inline-flex; align-items: center; gap: 4px; font-weight: 500; }
+.bar-track { height: 12px; background: var(--field); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width 0.3s; }
+.bars li.mine .bar-fill { background: var(--primary); }
+.mine-check { color: var(--primary); }
+.resp-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 0.92rem; }
+.choice-list { display: grid; gap: 8px; }
+.counsel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.counsel-item { border: 1px solid var(--border); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.reply { background: var(--primary-soft); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
+.tabs { display: flex; gap: 4px; background: var(--field); padding: 4px; border-radius: 10px; }
+.tab { border: none; background: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.88rem; color: var(--muted); }
+.tab.on { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+.feed { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; align-items: start; }
+.feed .panel { padding: 18px 20px; }
+.h-icon { color: var(--accent); vertical-align: -3px; }
+.more { display: inline-flex; align-items: center; color: var(--muted); font-size: 0.85rem; text-decoration: none; }
+.more:hover { color: var(--text); }
+@media (max-width: 860px) {
+  .read-cols { grid-template-columns: 1fr; }
+  .class-picker { padding-left: 8px; }
+  .class-picker select { max-width: 120px; }
+}

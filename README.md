@@ -14,6 +14,7 @@
 |---|---|
 | 로그인, 학생 아이디 만들기, 학생 명단, 비밀번호 변경 | 켜짐 |
 | 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
+| 학급운영 · 소통: 알림장(읽음 확인), 설문·투표, 상담 신청 | 켜짐 |
 | 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
 
 꺼 둔 기능은 메뉴와 화면만 숨겨져 있고, 코드와 이미 저장된 수업·슬라이드 데이터는 그대로 남아 있습니다.
@@ -141,6 +142,19 @@ firebase deploy --only firestore:rules
 - 사이트 프로그램 파일(`/assets/`)은 브라우저가 1년간 보관하고, 페이지는 매번 최신인지 확인합니다(`firebase.json`의 headers). 배포하면 바로 새 버전이 보입니다.
 - 학생 기기는 1분마다 접속 신호를 보냅니다. 30명이 50분 수업하면 쓰기 약 1,500회로, 무료 한도(하루 2만 회) 안에서 하루 5~6교시 정도 쓸 수 있습니다.
 
+## 학급운영 · 소통
+
+교사 화면 위쪽 **반 선택**에서 고른 반을 대상으로 동작합니다 (이 기기에 기억). 학생은 자기 반 것만 봅니다.
+
+- **알림장**: 교사가 알림을 올리면 학생 홈과 알림장에 보입니다. 중요한 알림은 **맨 위에 고정**.
+  학생이 알림을 열면 읽음이 기록되고, 교사는 알림 화면에서 **읽음 n/전체**와 안 읽은 학생을 봅니다. 학생 화면에는 안 읽은 알림에 '새 글'.
+- **설문·투표**: 질문과 선택지(2~20개), 여러 개 선택, **익명**(이름을 저장하지 않음)을 정해 올립니다.
+  학생은 마감 전까지 답을 바꿀 수 있고, 교사는 실시간 결과·응답자·미응답자를 봅니다. **마감**, **학생에게 결과 공개**(그 순간의 결과) 가능.
+- **상담 신청**: 학생이 주제·내용·편한 시간을 적어 신청하면 **선생님만** 봅니다. 교사는 상태(확인 전/상담 예정/상담 완료)와 답변을 남기고,
+  학생은 확인 전일 때만 취소할 수 있습니다.
+- 보안 규칙: 다른 반 글 읽기, 친구 이름으로 쓰기, 친구 응답·상담 보기, 마감된 설문 응답, 학생의 상태 변경은 모두 거부됩니다.
+- 색인(인덱스)을 따로 만들 필요가 없도록 반 하나로만 조회하고 정렬은 화면에서 합니다.
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -214,6 +228,19 @@ lessons/{lessonId}/slides/{000…}   // 슬라이드 그림
   index, image (data URL, 1MB 미만), w, h
   teacherUid, createdAt, updatedAt
 
+notices/{id}         // 알림장
+  classId, title, body, pinned, teacherUid, createdAt, updatedAt
+notices/{id}/reads/{uid}       // 읽음 기록 (학생 본인)
+  name, studentId, readAt
+polls/{id}           // 설문·투표
+  classId, title, description, options[], multiple, anonymous, closed,
+  results[] | null, resultsRespondents, teacherUid, createdAt
+polls/{id}/responses/{uid}     // 응답 (학생 본인, 익명이면 이름 없음)
+  choices[], answeredAt, name?, studentId?
+counsel/{id}         // 상담 신청 (본인과 교사만)
+  classId, studentUid, name, studentId, topic, message, preferredTime,
+  status ('new'|'scheduled'|'done'), reply, createdAt, updatedAt
+
 live/{classId}       // 실시간 수업 (반마다 하나, 교사만 씀)
   active, className, lessonId, slide, follow, videoMode ('sync' | 'teacher')
   video        // { videoId, state: 'playing'|'paused', time, at } 교사 영상 상태
@@ -250,6 +277,11 @@ src/
   slides.js                   PDF → 슬라이드 그림 변환(pdf.js), 저장, 불러오기
   slideCache.js               슬라이드 기기 보관(IndexedDB) — 다시 볼 때 서버에서 안 받음
   features.js                 기능 켜고 끄기 (VITE_FEATURE_LESSONS)
+  contexts/ClassContext.jsx   학급운영 대상 반 (교사: 반 선택, 학생: 내 반)
+  components/ClassGate.jsx    반 선택 상자, 반이 없을 때 안내
+  components/ClassFeed.jsx    홈의 '우리 반 소식' (알림장·설문·상담)
+  notices.js, polls.js, counsel.js   알림장·설문·상담 데이터
+  pages/Notices*.jsx, Poll*.jsx, CounselPage.jsx
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙

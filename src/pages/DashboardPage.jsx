@@ -8,6 +8,7 @@ import { FEATURES } from '../features';
 import { BookOpen, ChevronRight, KeyRound, Library, School, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
+import ClassFeed from '../components/ClassFeed';
 
 function TeacherHome() {
   const { students, loading } = useStudents();
@@ -33,6 +34,7 @@ function TeacherHome() {
           <div><div className="stat-label">첫 비밀번호 변경 전</div><div className="stat-value">{loading ? '…' : `${pending}명`}</div></div>
         </div>
       </div>
+      <ClassFeed />
       <section className="panel">
         <h2>바로 가기</h2>
         <div className="quick">
@@ -103,18 +105,21 @@ export default function DashboardPage() {
       <section className="welcome">
         <h2>안녕하세요, {profile?.displayName ? `${profile.displayName}님` : isTeacher ? '선생님' : ''} 👋</h2>
         <p className="muted">
-          {isTeacher ? '오늘 수업을 준비해 볼까요?' : '오늘도 즐겁게 배워 봐요.'}
+          {isTeacher ? '오늘도 우리 반을 응원해요.' : '오늘도 즐거운 하루 보내요.'}
           {myClass && <span className="class-chip">{myClass}</span>}
         </p>
       </section>
       {isTeacher ? (
         <TeacherHome />
-      ) : FEATURES.lessons ? (
-        <StudentLessons classId={profile?.classId} />
+      ) : profile?.classId ? (
+        <>
+          <ClassFeed />
+          {FEATURES.lessons && <StudentLessons classId={profile.classId} />}
+        </>
       ) : (
         <section className="panel empty">
           <BookOpen size={32} strokeWidth={1.5} />
-          <p>선생님이 수업을 준비하고 있어요. 조금만 기다려 주세요.</p>
+          <p>아직 반이 정해지지 않았어요. 선생님이 반에 넣어 주면 우리 반 소식이 보여요.</p>
         </section>
       )}
     </>
