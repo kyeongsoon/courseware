@@ -23,14 +23,17 @@ import { db } from './firebase';
  */
 
 // 반 목록 실시간 구독 (이름순)
-export function useClasses() {
+export function useClasses(enabled = true) {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(
-    () =>
-      onSnapshot(
+  useEffect(() => {
+    if (!enabled) {
+      setClasses([]);
+      return undefined;
+    }
+    return onSnapshot(
         query(collection(db, 'classes'), orderBy('name')),
         (snap) => {
           setClasses(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -40,9 +43,8 @@ export function useClasses() {
           setError(err.code ?? err.message);
           setLoading(false);
         },
-      ),
-    [],
-  );
+      );
+  }, [enabled]);
 
   return { classes, loading, error };
 }

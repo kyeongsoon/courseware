@@ -5,6 +5,9 @@ import {
   Users,
   School,
   Library,
+  Megaphone,
+  Vote,
+  HeartHandshake,
   UserPlus,
   KeyRound,
   CircleHelp,
@@ -18,6 +21,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import LiveBar from './LiveBar';
 import { FEATURES } from '../features';
+import { ClassPicker } from './ClassGate';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 
@@ -31,9 +35,16 @@ function readCollapsed() {
 
 /** 메뉴 구성: 역할에 따라 보이는 항목이 달라짐 */
 function buildSections({ isTeacher, hasPassword }) {
-  const lessonItems = [{ to: '/', label: '홈', icon: LayoutGrid, end: true }];
-  if (isTeacher && FEATURES.lessons) lessonItems.push({ to: '/teacher/lessons', label: '수업 관리', icon: Library });
-  const sections = [{ title: '수업', items: lessonItems }];
+  const classItems = [
+    { to: '/', label: '홈', icon: LayoutGrid, end: true },
+    { to: '/notices', label: '알림장', icon: Megaphone },
+    { to: '/polls', label: '설문·투표', icon: Vote },
+    { to: '/counsel', label: isTeacher ? '상담 신청함' : '상담 신청', icon: HeartHandshake },
+  ];
+  const sections = [{ title: '우리 반', items: classItems }];
+  if (isTeacher && FEATURES.lessons) {
+    sections.push({ title: '수업', items: [{ to: '/teacher/lessons', label: '수업 관리', icon: Library }] });
+  }
   if (isTeacher) {
     sections.push({
       title: '학생 관리',
@@ -53,6 +64,9 @@ function buildSections({ isTeacher, hasPassword }) {
 export function usePageTitle() {
   const { pathname } = useLocation();
   if (pathname.startsWith('/teacher/classes')) return '반 관리';
+  if (pathname.startsWith('/notices')) return '알림장';
+  if (pathname.startsWith('/polls')) return '설문·투표';
+  if (pathname.startsWith('/counsel')) return '상담';
   if (pathname === '/teacher/lessons/new') return '새 차시';
   if (pathname.endsWith('/edit')) return '차시 수정';
   if (pathname.startsWith('/teacher/lessons')) return '수업 관리';
@@ -175,6 +189,7 @@ export default function AppLayout() {
             <Menu size={22} />
           </button>
           <h1>{title}</h1>
+          <ClassPicker />
           <div className="me">
             <span className="role">{isTeacher ? '교사' : '학생'}</span>
             <span className="me-name">
