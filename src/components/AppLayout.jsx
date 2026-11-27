@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import LiveBar from './LiveBar';
+import { FEATURES } from '../features';
 
 const COLLAPSE_KEY = 'sidebar-collapsed';
 
@@ -31,7 +32,7 @@ function readCollapsed() {
 /** 메뉴 구성: 역할에 따라 보이는 항목이 달라짐 */
 function buildSections({ isTeacher, hasPassword }) {
   const lessonItems = [{ to: '/', label: '홈', icon: LayoutGrid, end: true }];
-  if (isTeacher) lessonItems.push({ to: '/teacher/lessons', label: '수업 관리', icon: Library });
+  if (isTeacher && FEATURES.lessons) lessonItems.push({ to: '/teacher/lessons', label: '수업 관리', icon: Library });
   const sections = [{ title: '수업', items: lessonItems }];
   if (isTeacher) {
     sections.push({
@@ -183,7 +184,7 @@ export default function AppLayout() {
             <span className="avatar">{initial}</span>
           </div>
         </header>}
-        {!bare && <LiveBar />}
+        {!bare && FEATURES.lessons && <LiveBar />}
         <main className="content-body">
           <Outlet />
         </main>

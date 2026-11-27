@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from './AuthContext';
+import { FEATURES } from '../features';
 import {
   HEARTBEAT_MS, endLive, isOnline, isPageFocused, lowerAllHands, lowerHand, memberStatus, startLive, touchMember, updateLive,
 } from '../live';
@@ -152,7 +153,8 @@ export function LiveProvider({ children }) {
   const { user, profile, isTeacher } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const ready = !!user && !!profile && !profile.mustChangePassword;
+  // 수업 기능을 꺼 두면 실시간 수업도 완전히 멈춤 (예전에 시작한 수업이 남아 있어도 학생이 끌려가지 않음)
+  const ready = FEATURES.lessons && !!user && !!profile && !profile.mustChangePassword;
 
   const teacher = useTeacherLive(ready && isTeacher, user?.uid);
   const student = useStudentLive(ready && !isTeacher && !!profile?.classId, user?.uid, profile?.classId, profile);
