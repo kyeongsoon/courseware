@@ -8,6 +8,20 @@
   - 학생은 첫 로그인 때 비밀번호 변경
   - 교사는 Google 또는 이메일 계정으로 로그인
 
+## 지금 켜져 있는 기능
+
+| 기능 | 상태 |
+|---|---|
+| 로그인, 학생 아이디 만들기, 학생 명단, 비밀번호 변경 | 켜짐 |
+| 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
+| 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
+
+꺼 둔 기능은 메뉴와 화면만 숨겨져 있고, 코드와 이미 저장된 수업·슬라이드 데이터는 그대로 남아 있습니다.
+꺼 둔 동안에는 실시간 수업도 완전히 멈춰서, 예전에 시작해 둔 수업이 남아 있어도 학생 화면이 끌려가지 않습니다.
+
+**다시 켜려면** `.env.production`의 `VITE_FEATURE_LESSONS=false`를 `true`로 바꿔 `main`에 합치면 자동 배포됩니다.
+(로컬 테스트: `npm run dev:emu`는 꺼진 상태, `npm run dev:emu:all`은 켜진 상태로 실행)
+
 ## 1. Firebase 프로젝트 준비 (콘솔에서 1회)
 
 1. <https://console.firebase.google.com> 에서 프로젝트 생성
@@ -235,6 +249,7 @@ src/
   components/SlideViewer.jsx  슬라이드 보기 (넘기기, 리모컨, 전체 화면, 수업 중 교사 따라가기)
   slides.js                   PDF → 슬라이드 그림 변환(pdf.js), 저장, 불러오기
   slideCache.js               슬라이드 기기 보관(IndexedDB) — 다시 볼 때 서버에서 안 받음
+  features.js                 기능 켜고 끄기 (VITE_FEATURE_LESSONS)
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙

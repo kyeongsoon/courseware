@@ -4,6 +4,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useClasses } from '../classes';
 import { groupByUnit, useLessons, useUnits } from '../lessons';
+import { FEATURES } from '../features';
 import { BookOpen, ChevronRight, KeyRound, Library, School, UserPlus, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
@@ -35,7 +36,7 @@ function TeacherHome() {
       <section className="panel">
         <h2>바로 가기</h2>
         <div className="quick">
-          <Link to="/teacher/lessons" className="quick-item"><Library size={20} /> 수업 관리</Link>
+          {FEATURES.lessons && <Link to="/teacher/lessons" className="quick-item"><Library size={20} /> 수업 관리</Link>}
           <Link to="/teacher/classes" className="quick-item"><School size={20} /> 반 관리</Link>
           <Link to="/teacher/accounts" className="quick-item"><UserPlus size={20} /> 학생 계정 만들기</Link>
           <Link to="/teacher/students" className="quick-item"><Users size={20} /> 학생 명단 보기</Link>
@@ -108,8 +109,13 @@ export default function DashboardPage() {
       </section>
       {isTeacher ? (
         <TeacherHome />
-      ) : (
+      ) : FEATURES.lessons ? (
         <StudentLessons classId={profile?.classId} />
+      ) : (
+        <section className="panel empty">
+          <BookOpen size={32} strokeWidth={1.5} />
+          <p>선생님이 수업을 준비하고 있어요. 조금만 기다려 주세요.</p>
+        </section>
       )}
     </>
   );
