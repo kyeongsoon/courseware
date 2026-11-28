@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
 import ClassFeed from '../components/ClassFeed';
 import { MyCheckIn, TodaySummary } from './AttendancePage';
+import { TodayBoard } from './TimetablePage';
 
 function TeacherHome() {
   const { students, loading } = useStudents();
@@ -36,6 +37,7 @@ function TeacherHome() {
         </div>
       </div>
       <TodaySummary />
+      <TodayBoard />
       <ClassFeed />
       <section className="panel">
         <h2>바로 가기</h2>
@@ -116,6 +118,7 @@ export default function DashboardPage() {
       ) : profile?.classId ? (
         <>
           <MyCheckIn compact />
+          <TodayBoard />
           <ClassFeed />
           {FEATURES.lessons && <StudentLessons classId={profile.classId} />}
         </>

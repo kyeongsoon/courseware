@@ -10,6 +10,8 @@ import {
   HeartHandshake,
   CalendarCheck,
   Armchair,
+  CalendarDays,
+  Clock,
   UserPlus,
   KeyRound,
   CircleHelp,
@@ -47,7 +49,11 @@ function buildSections({ isTeacher, hasPassword }) {
     { to: '/attendance', label: isTeacher ? '출결' : '출석 체크', icon: CalendarCheck },
     { to: '/seating', label: isTeacher ? '자리 배치' : '자리표', icon: Armchair },
   ];
-  const sections = [{ title: '우리 반', items: classItems }, { title: '생활', items: lifeItems }];
+  const planItems = [
+    { to: '/calendar', label: '학급 달력', icon: CalendarDays },
+    { to: '/timetable', label: '시간표', icon: Clock },
+  ];
+  const sections = [{ title: '우리 반', items: classItems }, { title: '생활', items: lifeItems }, { title: '일정', items: planItems }];
   if (isTeacher && FEATURES.lessons) {
     sections.push({ title: '수업', items: [{ to: '/teacher/lessons', label: '수업 관리', icon: Library }] });
   }
@@ -75,6 +81,8 @@ export function usePageTitle() {
   if (pathname.startsWith('/counsel')) return '상담';
   if (pathname.startsWith('/attendance')) return '출결';
   if (pathname.startsWith('/seating')) return '자리표';
+  if (pathname.startsWith('/calendar')) return '학급 달력';
+  if (pathname.startsWith('/timetable')) return '시간표';
   if (pathname === '/teacher/lessons/new') return '새 차시';
   if (pathname.endsWith('/edit')) return '차시 수정';
   if (pathname.startsWith('/teacher/lessons')) return '수업 관리';

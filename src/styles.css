@@ -478,3 +478,55 @@ input[type='date'], input[type='month'], input[type='time'], input[type='number'
 .att-table td, .att-table th { white-space: nowrap; }
 .seg-btn { white-space: nowrap; }
 .note-input { width: 100%; box-sizing: border-box; }
+
+/* ───── 일정: 달력 ───── */
+.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.cal-side { display: flex; flex-direction: column; gap: 16px; }
+.cal-title { margin: 0 6px; min-width: 120px; text-align: center; }
+.cal-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.82rem; color: var(--muted); }
+.cal-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.cal-head { padding: 6px; text-align: center; font-size: 0.82rem; font-weight: 600; color: var(--muted); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.cal-head.sun, .cal-day.sun { color: #dc2626; }
+.cal-head.sat, .cal-day.sat { color: #2563eb; }
+.cal-cell { min-height: 96px; padding: 4px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.cal-cell.clickable { cursor: pointer; }
+.cal-cell.clickable:hover { background: var(--bg); }
+.cal-cell.other { background: #fafafa; }
+.cal-cell.other .cal-day { opacity: 0.4; }
+.cal-day { font-size: 0.85rem; font-weight: 600; padding: 2px 4px; align-self: flex-start; border-radius: 999px; }
+.cal-cell.today .cal-day { background: var(--primary); color: #fff; }
+.cal-ev { border: none; border-radius: 4px; padding: 2px 5px; font-size: 0.75rem; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; }
+.ev-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.ev-0 { background: #dc2626; } .ev-1 { background: #d97706; } .ev-2 { background: #16a34a; } .ev-3 { background: #2563eb; } .ev-4 { background: #71717a; }
+.ev-form h2 { display: flex; align-items: center; gap: 8px; }
+.up-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.up-list li { display: flex; align-items: center; gap: 8px; font-size: 0.92rem; }
+.dday { flex: none; min-width: 52px; text-align: center; font-size: 0.75rem; font-weight: 700; padding: 2px 6px; border-radius: 6px; background: var(--field); color: var(--text-2); }
+.dday.now { background: #fee2e2; color: #b91c1c; }
+
+/* ───── 일정: 시간표 ───── */
+.tt { table-layout: fixed; }
+.tt th, .tt td { text-align: center; border: 1px solid var(--border); padding: 8px 6px; }
+.tt .tt-p { width: 110px; display: table-cell; }
+.tt .tt-p b { display: block; }
+.tt td { display: table-cell; }
+.tt td > span { display: block; }
+.tt-s { font-weight: 600; }
+.tt th.today { background: var(--primary-soft); color: var(--primary-text); }
+.tt td.today { background: #f7fdf9; }
+.tt tr.now-row th.tt-p { color: var(--primary-text); }
+.tt td.now { background: var(--primary); color: #fff; }
+.tt td.now .muted { color: #d1fae5; }
+.tt.edit input { width: 100%; padding: 6px; font-size: 0.88rem; text-align: center; }
+.tt.edit .tt-room { margin-top: 4px; font-size: 0.78rem; padding: 4px; }
+.today-tt { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.today-tt li { display: flex; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--border); font-size: 0.93rem; }
+.today-tt li.now { background: var(--primary-soft); border-radius: 8px; font-weight: 600; }
+.tt-n { width: 22px; height: 22px; border-radius: 50%; background: var(--field); display: grid; place-items: center; font-size: 0.78rem; font-weight: 700; }
+@media (max-width: 1000px) { .cal-layout { grid-template-columns: 1fr; } }
+@media (max-width: 860px) {
+  .cal-cell { min-height: 64px; }
+  .cal-ev { font-size: 0.65rem; padding: 1px 3px; }
+  .tt .tt-p { width: 70px; }
+}

@@ -16,6 +16,7 @@
 | 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
 | 학급운영 · 소통: 알림장(읽음 확인), 설문·투표, 상담 신청 | 켜짐 |
 | 학급운영 · 생활: 출결·조회 체크, 자리 배치 | 켜짐 |
+| 학급운영 · 일정: 학급 달력, 시간표 | 켜짐 |
 | 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
 
 꺼 둔 기능은 메뉴와 화면만 숨겨져 있고, 코드와 이미 저장된 수업·슬라이드 데이터는 그대로 남아 있습니다.
@@ -170,6 +171,14 @@ firebase deploy --only firestore:rules
   - **교사 시점**(교탁이 아래)·**학생 시점**(교탁이 위)으로 볼 수 있고, 전체 화면으로 프로젝터에 띄울 수 있습니다.
   - **저장**한 뒤 **학생에게 공개**하면 학생 화면에서 자기 자리가 강조됩니다. 공개 전에는 학생이 볼 수 없습니다(열어 둔 학생 화면도 공개 후 10초 안에 보임).
 
+## 학급운영 · 일정
+
+- **학급 달력**: 월 달력에 시험·수행평가·행사·과제·기타 일정을 색으로 구분해 보여 줍니다.
+  교사는 **일정 추가** 또는 날짜 칸을 눌러 추가하고(여러 날 일정 가능, 메모), 일정을 눌러 수정·삭제합니다. 학생은 눌러서 내용만 봅니다.
+  홈에 **다가오는 일정**(14일, D-day)이 보입니다.
+- **시간표**: 교사가 **시간표 만들기**로 월~금(또는 월~토), 1~10교시의 과목·교실과 교시별 시간(예: `09:00-09:45`)을 입력합니다.
+  오늘 요일과 **지금 수업**이 강조되고, 홈에 **오늘 시간표**가 보입니다 (한국 시각 기준, 1분마다 갱신).
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -263,6 +272,11 @@ classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
 seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이 읽음)
   rows, cols, cells[ null | {blocked:true} | {uid,name,studentId} ], locked[], published, teacherUid, updatedAt
 
+events/{id}          // 학급 달력 일정
+  classId, title, type ('시험'|'수행평가'|'행사'|'과제'|'기타'), date, endDate, note, teacherUid, createdAt
+timetables/{classId} // 시간표
+  days(5|6), periods(1~10), times['09:00-09:45', …], cells[ {s: 과목, r: 교실} | null ] (요일 먼저), teacherUid, updatedAt
+
 live/{classId}       // 실시간 수업 (반마다 하나, 교사만 씀)
   active, className, lessonId, slide, follow, videoMode ('sync' | 'teacher')
   video        // { videoId, state: 'playing'|'paused', time, at } 교사 영상 상태
@@ -305,6 +319,8 @@ src/
   notices.js, polls.js, counsel.js   알림장·설문·상담 데이터
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
   pages/AttendancePage.jsx, SeatingPage.jsx
+  schedule.js                 달력·시간표 데이터와 날짜 계산
+  pages/CalendarPage.jsx, TimetablePage.jsx (홈의 '오늘 시간표·다가오는 일정' 포함)
   pages/Notices*.jsx, Poll*.jsx, CounselPage.jsx
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장

@@ -19,6 +19,8 @@ import PollDetailPage from './pages/PollDetailPage';
 import CounselPage from './pages/CounselPage';
 import AttendancePage from './pages/AttendancePage';
 import SeatingPage from './pages/SeatingPage';
+import CalendarPage from './pages/CalendarPage';
+import TimetablePage from './pages/TimetablePage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
 import TeacherLessonsPage from './pages/TeacherLessonsPage';
@@ -49,6 +51,9 @@ export default function App() {
             {/* 학급운영: 생활 */}
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/seating" element={<SeatingPage />} />
+            {/* 학급운영: 일정 */}
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/timetable" element={<TimetablePage />} />
             {/* 수업·슬라이드·실시간 수업: FEATURES.lessons 가 꺼져 있으면 주소로 들어와도 홈으로 */}
             {FEATURES.lessons && (
               <>
