@@ -179,6 +179,17 @@ firebase deploy --only firestore:rules
 - **시간표**: 교사가 **시간표 만들기**로 월~금(또는 월~토), 1~10교시의 과목·교실과 교시별 시간(예: `09:00-09:45`)을 입력합니다.
   오늘 요일과 **지금 수업**이 강조되고, 홈에 **오늘 시간표**가 보입니다 (한국 시각 기준, 1분마다 갱신).
 
+## 학생 계정 삭제 (교사)
+
+**학생 명단**에서 학생 줄의 **삭제**를 누르거나, 여러 명을 체크한 뒤 **선택한 학생 삭제**를 누릅니다.
+그 학생의 출결, 알림 읽음 기록, 설문 응답, 상담 신청이 지워지고 자리표의 자리는 빈자리가 됩니다. 되돌릴 수 없습니다.
+
+- **무료 요금제(지금)**: 남의 로그인 계정을 지우는 건 서버 기능(Blaze)으로만 되므로, 계정 정보가 '삭제됨'으로 바뀌어
+  명단·반에서 빠지고, 그 아이디로 로그인해도 "삭제된 계정이에요"만 보입니다 (스스로 되돌릴 수 없음).
+  **같은 학번으로 다시 만들려면** 학생 명단 위 **Firebase 로그인 계정 관리** 버튼(새 탭: 콘솔 Authentication → 사용자)에서
+  `학번@student.invalid` 계정을 지운 뒤 계정 만들기에서 다시 만드세요. 삭제 완료 안내에도 지울 아이디와 바로가기가 나옵니다.
+- **서버 기능을 켜면**(아래 6번과 같은 설정): 로그인 계정과 계정 정보까지 완전히 지워져 같은 학번을 바로 다시 쓸 수 있습니다 (Cloud Function `deleteStudent`).
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -313,6 +324,7 @@ src/
   slides.js                   PDF → 슬라이드 그림 변환(pdf.js), 저장, 불러오기
   slideCache.js               슬라이드 기기 보관(IndexedDB) — 다시 볼 때 서버에서 안 받음
   features.js                 기능 켜고 끄기 (VITE_FEATURE_LESSONS)
+  deleteStudents.js           학생 계정 삭제 (기록 정리 + 정지/완전 삭제), 콘솔 바로가기 주소
   contexts/ClassContext.jsx   학급운영 대상 반 (교사: 반 선택, 학생: 내 반)
   components/ClassGate.jsx    반 선택 상자, 반이 없을 때 안내
   components/ClassFeed.jsx    홈의 '우리 반 소식' (알림장·설문·상담)
@@ -325,5 +337,5 @@ src/
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장
 firestore.rules               Firestore 보안 규칙
-functions/index.js            Cloud Functions: 학생 비밀번호 초기화
+functions/index.js            Cloud Functions: 학생 비밀번호 초기화, 학생 계정 완전 삭제
 ```

@@ -19,6 +19,32 @@ function generatePassword(length = 8) {
  * - 대상은 학생 계정만 가능 (교사 계정은 초기화 불가)
  * - 새 임시 비밀번호를 돌려주고, 학생은 다음 로그인 때 다시 비밀번호를 바꿔야 함
  */
+/**
+ * 교사가 학생 계정을 완전히 삭제합니다 (로그인 계정 + users 문서).
+ * 출결·응답 등 학생 기록은 화면(교사 브라우저)에서 먼저 지운 뒤 호출합니다.
+ * 로그인 계정이 지워지므로 같은 학번으로 바로 다시 만들 수 있습니다.
+ */
+export const deleteStudent = onCall({ region: 'asia-northeast3' }, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');
+  const caller = await db.doc(`users/${callerUid}`).get();
+  if (caller.get('role') !== 'teacher') throw new HttpsError('permission-denied', '교사만 사용할 수 있습니다.');
+
+  const { uid } = request.data ?? {};
+  if (typeof uid !== 'string' || !uid) throw new HttpsError('invalid-argument', '학생을 지정해 주세요.');
+  const ref = db.doc(`users/${uid}`);
+  const snap = await ref.get();
+  if (snap.exists && snap.get('role') !== 'student') throw new HttpsError('permission-denied', '학생 계정만 삭제할 수 있습니다.');
+
+  try {
+    await getAuth().deleteUser(uid);
+  } catch (e) {
+    if (e.code !== 'auth/user-not-found') throw e;
+  }
+  await ref.delete();
+  return { ok: true };
+});
+
 export const resetStudentPassword = onCall({ region: 'asia-northeast3' }, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) throw new HttpsError('unauthenticated', '로그인이 필요합니다.');

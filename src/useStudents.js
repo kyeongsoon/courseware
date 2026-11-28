@@ -14,7 +14,8 @@ export function useStudents() {
       onSnapshot(
         query(collection(db, 'users'), orderBy('studentId')),
         (snap) => {
-          setStudents(snap.docs.map((d) => d.data()).filter((u) => u.role !== 'teacher'));
+          // 삭제된 학생(무료 요금제에서 정지만 된 계정)은 명단에서 뺌
+          setStudents(snap.docs.map((d) => d.data()).filter((u) => u.role !== 'teacher' && !u.deleted));
           setLoading(false);
         },
         (err) => {
