@@ -250,6 +250,63 @@ service cloud.firestore {
         || (signedIn() && resource.data.studentUid == request.auth.uid && resource.data.status == 'new');
     }
 
+    // ───── 학급운영: 생활 ─────
+
+    // 한국 시각 기준 오늘 (예: 20261128) / 이번 달 (예: 202611)
+    function kstNow() {
+      return request.time + duration.value(9, 'h');
+    }
+    function todayKst() {
+      return kstNow().year() * 10000 + kstNow().month() * 100 + kstNow().day();
+    }
+    function thisMonthKst() {
+      return kstNow().year() * 100 + kstNow().month();
+    }
+
+    // 출결: 문서 하나 = 한 학생의 하루. 문서 이름은 '반_날짜_학생'
+    match /attendance/{attendanceId} {
+      function validByTeacher() {
+        let d = request.resource.data;
+        return isStr(d.classId, 1, 100)
+          && isStr(d.uid, 1, 128)
+          && d.date is int && d.month is int
+          && attendanceId == d.classId + '_' + string(d.date) + '_' + d.uid
+          && d.status in ['present', 'late', 'early', 'absent']
+          && d.reason in ['', '질병', '미인정', '기타', '출석인정']
+          && isStr(d.note, 0, 200)
+          && d.by in ['self', 'teacher'];
+      }
+      // 학생: 오늘, 자기 반, 자기 이름으로 '출석'만 처음 한 번 기록 (교사가 먼저 적어 둔 날은 못 덮어씀)
+      function validCheckIn() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['classId', 'uid', 'date', 'month', 'name', 'studentId', 'status', 'reason', 'note', 'by', 'checkedAt'])
+          && d.uid == request.auth.uid
+          && inClass(d.classId)
+          && d.date == todayKst()
+          && d.month == thisMonthKst()
+          && attendanceId == d.classId + '_' + string(d.date) + '_' + d.uid
+          && isMyName(d)
+          && d.status == 'present' && d.reason == '' && d.note == '' && d.by == 'self'
+          && d.checkedAt == request.time;
+      }
+      allow read: if isTeacher() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if (isTeacher() && validByTeacher()) || (signedIn() && validCheckIn());
+      allow update: if isTeacher() && validByTeacher();
+      allow delete: if isTeacher();
+    }
+
+    // 자리표: 반마다 하나. 교사가 만들고, 공개하면 그 반 학생이 봄
+    match /seating/{classId} {
+      allow read: if isTeacher() || (inClass(classId) && resource.data.published == true);
+      allow write: if isTeacher()
+        && request.resource.data.rows is int && request.resource.data.rows >= 1 && request.resource.data.rows <= 12
+        && request.resource.data.cols is int && request.resource.data.cols >= 1 && request.resource.data.cols <= 12
+        && request.resource.data.cells is list
+        && request.resource.data.cells.size() == request.resource.data.rows * request.resource.data.cols
+        && request.resource.data.locked is list
+        && request.resource.data.published is bool;
+    }
+
     // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)
     match /{document=**} {
       allow read, write: if false;

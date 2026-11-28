@@ -15,6 +15,7 @@
 | 로그인, 학생 아이디 만들기, 학생 명단, 비밀번호 변경 | 켜짐 |
 | 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
 | 학급운영 · 소통: 알림장(읽음 확인), 설문·투표, 상담 신청 | 켜짐 |
+| 학급운영 · 생활: 출결·조회 체크, 자리 배치 | 켜짐 |
 | 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
 
 꺼 둔 기능은 메뉴와 화면만 숨겨져 있고, 코드와 이미 저장된 수업·슬라이드 데이터는 그대로 남아 있습니다.
@@ -155,6 +156,20 @@ firebase deploy --only firestore:rules
 - 보안 규칙: 다른 반 글 읽기, 친구 이름으로 쓰기, 친구 응답·상담 보기, 마감된 설문 응답, 학생의 상태 변경은 모두 거부됩니다.
 - 색인(인덱스)을 따로 만들 필요가 없도록 반 하나로만 조회하고 정렬은 화면에서 합니다.
 
+## 학급운영 · 생활
+
+- **출결·조회 체크**
+  - 학생: 아침에 홈에서 **출석 체크**를 누르면 체크 시각과 함께 '출석'으로 기록됩니다. 오늘 날짜, 자기 반, 자기 것만, 처음 한 번만 쓸 수 있습니다(지각·결석 등은 학생이 못 씀).
+  - 교사(메뉴 **출결**): 날짜별로 반 전체를 보고 **미체크** 학생을 확인합니다. 출석·지각·조퇴·결석을 눌러 바꾸고, 사유(질병·미인정·기타·출석인정)와 메모를 남깁니다.
+    **늦음 기준** 시각을 정하면 그 뒤에 체크한 학생이 표시되고, **미체크 모두 결석**으로 한 번에 기록할 수 있습니다. 교사가 고쳐도 학생이 체크한 시각은 남습니다.
+  - **월별 요약**: 학생별 출석·지각·조퇴·결석 일수와 **CSV 다운로드**(날짜별 기록 포함) — 나이스 입력할 때 참고하세요.
+  - 날짜는 한국 시각 기준입니다.
+- **자리 배치** (메뉴 **자리 배치** / 학생은 **자리표**)
+  - 줄·칸(최대 12×12)을 정하고 **무작위 배치** 또는 **학번순**으로 앉힙니다.
+  - 누르는 방식: **자리 바꾸기**(두 자리를 눌러 교환, '아직 자리가 없는 학생'을 눌러 앉히기), **자리 없음 칸**(기둥·통로), **고정**(무작위 배치 때 안 움직임).
+  - **교사 시점**(교탁이 아래)·**학생 시점**(교탁이 위)으로 볼 수 있고, 전체 화면으로 프로젝터에 띄울 수 있습니다.
+  - **저장**한 뒤 **학생에게 공개**하면 학생 화면에서 자기 자리가 강조됩니다. 공개 전에는 학생이 볼 수 없습니다(열어 둔 학생 화면도 공개 후 10초 안에 보임).
+
 ## 6. 학생 비밀번호 초기화 (교사)
 
 교사용 페이지 → 학생 명단 → **초기화** 버튼을 누르면 새 8자리 임시 비밀번호가 화면에 나옵니다.
@@ -241,6 +256,13 @@ counsel/{id}         // 상담 신청 (본인과 교사만)
   classId, studentUid, name, studentId, topic, message, preferredTime,
   status ('new'|'scheduled'|'done'), reply, createdAt, updatedAt
 
+attendance/{반_날짜_학생}   // 출결 (학생은 오늘 '출석'만 처음 한 번)
+  classId, uid, date(20261128), month(202611), name, studentId,
+  status ('present'|'late'|'early'|'absent'), reason, note, by ('self'|'teacher'), checkedAt, updatedAt
+classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
+seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이 읽음)
+  rows, cols, cells[ null | {blocked:true} | {uid,name,studentId} ], locked[], published, teacherUid, updatedAt
+
 live/{classId}       // 실시간 수업 (반마다 하나, 교사만 씀)
   active, className, lessonId, slide, follow, videoMode ('sync' | 'teacher')
   video        // { videoId, state: 'playing'|'paused', time, at } 교사 영상 상태
@@ -281,6 +303,8 @@ src/
   components/ClassGate.jsx    반 선택 상자, 반이 없을 때 안내
   components/ClassFeed.jsx    홈의 '우리 반 소식' (알림장·설문·상담)
   notices.js, polls.js, counsel.js   알림장·설문·상담 데이터
+  attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
+  pages/AttendancePage.jsx, SeatingPage.jsx
   pages/Notices*.jsx, Poll*.jsx, CounselPage.jsx
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)
   studentAccounts.js          학번↔내부 이메일 변환, 일괄 생성, CSV 저장

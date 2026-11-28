@@ -9,6 +9,7 @@ import { BookOpen, ChevronRight, KeyRound, Library, School, UserPlus, Users } fr
 import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
 import ClassFeed from '../components/ClassFeed';
+import { MyCheckIn, TodaySummary } from './AttendancePage';
 
 function TeacherHome() {
   const { students, loading } = useStudents();
@@ -34,6 +35,7 @@ function TeacherHome() {
           <div><div className="stat-label">첫 비밀번호 변경 전</div><div className="stat-value">{loading ? '…' : `${pending}명`}</div></div>
         </div>
       </div>
+      <TodaySummary />
       <ClassFeed />
       <section className="panel">
         <h2>바로 가기</h2>
@@ -113,6 +115,7 @@ export default function DashboardPage() {
         <TeacherHome />
       ) : profile?.classId ? (
         <>
+          <MyCheckIn compact />
           <ClassFeed />
           {FEATURES.lessons && <StudentLessons classId={profile.classId} />}
         </>
