@@ -163,6 +163,9 @@ export function groupsOf(roster, edges) {
     });
     if (!changed) break;
   }
+  // 아무에게도 선택받지 못한 학생은 무리에 넣지 않음 (한쪽으로만 고른 것)
+  const chosen = new Set(edges.map((e) => e.to));
+  Object.keys(label).forEach((u) => { if (!chosen.has(u)) label[u] = `solo-${u}`; });
   // 1명짜리 무리는 무리 없음(-1), 나머지는 0,1,2… 로 다시 번호
   const size = {};
   Object.values(label).forEach((l) => (size[l] = (size[l] ?? 0) + 1));

@@ -7,31 +7,34 @@ export const GROUP_COLORS = ['#22b573', '#3b82f6', '#f59e0b', '#a855f7', '#ec489
 const EDGE = { added: '#16a34a', removed: '#dc2626', kept: '#a1a1aa' };
 
 // 같은 학생은 회차를 바꿔도 비슷한 자리에 오도록: 학번순 원에서 시작해 정해진 횟수만 계산 (무작위 없음)
-export function useLayout(roster, layoutEdges) {
+// 화면 비율(가로로 넓게)에 맞게 퍼뜨리고, 점 크기+이름 자리만큼 겹치지 않게. 크기는 줄이지 않고 보는 범위(viewBox)를 맞춤
+export function useLayout(roster, layoutEdges, radius) {
   return useMemo(() => {
+    const n = roster.length;
     const sorted = [...roster].sort((a, b) => String(a.studentId).localeCompare(String(b.studentId)));
+    const R0 = 60 + n * 9;
     const nodes = sorted.map((s, i) => {
-      const t = (i / Math.max(1, sorted.length)) * Math.PI * 2;
-      return { id: s.uid, x: Math.cos(t) * 200, y: Math.sin(t) * 200 };
+      const t = (i / Math.max(1, n)) * Math.PI * 2;
+      return { id: s.uid, r: radius(s.uid), x: Math.cos(t) * R0 * 1.4, y: Math.sin(t) * R0 };
     });
-    const ids = new Set(nodes.map((n) => n.id));
+    const ids = new Set(nodes.map((d) => d.id));
     const links = layoutEdges.filter((e) => ids.has(e.from) && ids.has(e.to)).map((e) => ({ source: e.from, target: e.to, mutual: e.mutual }));
     const sim = forceSimulation(nodes)
-      .force('link', forceLink(links).id((d) => d.id).distance((l) => (l.mutual ? 60 : 95)).strength(0.5))
-      .force('charge', forceManyBody().strength(-260))
-      .force('x', forceX(0).strength(0.06))
-      .force('y', forceY(0).strength(0.08))
-      .force('collide', forceCollide(38))
+      .force('link', forceLink(links).id((d) => d.id).distance((l) => (l.mutual ? 85 : 120)).strength(0.35))
+      .force('charge', forceManyBody().strength(-420).distanceMax(500))
+      .force('x', forceX(0).strength(0.035))
+      .force('y', forceY(0).strength(0.07))
+      .force('collide', forceCollide((d) => d.r + 26).strength(1).iterations(3))
       .stop();
-    for (let i = 0; i < 320; i++) sim.tick();
-    // 화면 크기에 맞추기
-    const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
-    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
-    const k = Math.min((W - PAD * 2) / Math.max(1, x1 - x0), (H - PAD * 2) / Math.max(1, y1 - y0), 2.6);
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    return Object.fromEntries(nodes.map((n) => [n.id, { x: W / 2 + (n.x - cx) * k, y: H / 2 + (n.y - cy) * k }]));
+    for (let i = 0; i < 450; i++) sim.tick();
+    const xs = nodes.map((d) => d.x), ys = nodes.map((d) => d.y);
+    let [x0, x1, y0, y1] = [Math.min(...xs) - PAD, Math.max(...xs) + PAD, Math.min(...ys) - PAD, Math.max(...ys) + PAD + 14];
+    // 너무 작으면 기본 크기만큼 (점이 지나치게 커 보이지 않게)
+    if (x1 - x0 < W) { const c = (x0 + x1) / 2; x0 = c - W / 2; x1 = c + W / 2; }
+    if (y1 - y0 < H) { const c = (y0 + y1) / 2; y0 = c - H / 2; y1 = c + H / 2; }
+    return { pos: Object.fromEntries(nodes.map((d) => [d.id, { x: d.x, y: d.y }])), vb: `${x0} ${y0} ${x1 - x0} ${y1 - y0}` };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roster.map((s) => s.uid).join(), layoutEdges.map((e) => `${e.from}>${e.to}`).join()]);
+  }, [roster.map((s) => `${s.uid}:${radius(s.uid)}`).join(), layoutEdges.map((e) => `${e.from}>${e.to}`).join()]);
 }
 
 // 두 점 사이 선을 원 가장자리에서 끊기 (화살촉이 원에 가리지 않게)
@@ -45,16 +48,16 @@ function trim(a, b, ra, rb) {
  * notes: 관찰 기록 [{ a, b, kind }] (선택)
  */
 export default function RelationGraph({ roster, edges, layoutEdges, deg, groups, notes = [], selected, onSelect, compare = false }) {
-  const pos = useLayout(roster, layoutEdges ?? edges);
   const radius = (uid) => 17 + Math.min(5, deg[uid]?.inn ?? 0) * 3;
+  const { pos, vb } = useLayout(roster, layoutEdges ?? edges, radius);
   const touches = (e) => !selected || e.from === selected || e.to === selected || e.a === selected || e.b === selected;
   const drawn = new Set();
 
   return (
-    <svg className="rel-graph" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="학급 관계도" onClick={() => onSelect?.(null)}>
+    <svg className="rel-graph" viewBox={vb} role="img" aria-label="학급 관계도" onClick={() => onSelect?.(null)}>
       <defs>
         {[['arrow', '#71717a'], ['arrow-added', EDGE.added], ['arrow-removed', EDGE.removed], ['arrow-hi', '#18181b']].map(([id, c]) => (
-          <marker key={id} id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker key={id} id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill={c} />
           </marker>
         ))}
