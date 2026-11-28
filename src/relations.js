@@ -9,7 +9,9 @@ import { db } from './firebase';
  * relSurveys/{id}  { classId, title, questions: [{ id: 'q1'|'q2'|'q3', text }], questionIds, maxPicks: 3,
  *                    roster: [{ uid, name, studentId }] (만들 때 반 명단, 학생이 친구를 고를 때 씀),
  *                    open, teacherUid, createdAt }   — 교사가 만들고 그 반 학생이 읽음
- * relResponses/{설문_학생}  { surveyId, classId, uid, answers: { q1: [uid…], … }, submittedAt }
+ *                    conflictQ: true 면 '갈등이 있었던 친구' 선택 질문을 함께 물음
+ * relResponses/{설문_학생}  { surveyId, classId, uid, answers: { q1: [uid…], … },
+ *                    conflicts: [{ uid, text }] (갈등 질문, 최대 2명, 선택), submittedAt }
  *                    — 학생은 자기 것만 쓰고 읽음, 결과(남의 응답)는 교사만
  * relNotes/{id}    { classId, a, b, kind, note, date, teacherUid, createdAt } — 교사 관찰 기록 (교사만)
  */
@@ -19,6 +21,8 @@ export const DEFAULT_QUESTIONS = [
   { id: 'q3', text: '도움을 받고 싶은 친구' },
 ];
 export const MAX_PICKS = 3;
+export const MAX_CONFLICTS = 2;
+export const CONFLICT_QUESTION = '최근 갈등이 있었거나 불편했던 친구';
 
 export const NOTE_KINDS = {
   close: { label: '친함', color: '#2563eb' },
@@ -69,12 +73,12 @@ export function useNotes(classId) {
   return list;
 }
 
-export function createSurvey(classId, { title, questions, roster }, teacherUid) {
+export function createSurvey(classId, { title, questions, roster, conflictQ = false }, teacherUid) {
   const qs = questions.filter((q) => q.text.trim()).map((q, i) => ({ id: `q${i + 1}`, text: q.text.trim().slice(0, 60) }));
   return addDoc(collection(db, 'relSurveys'), {
     classId, title: title.trim().slice(0, 40), questions: qs, questionIds: qs.map((q) => q.id), maxPicks: MAX_PICKS,
     roster: roster.map((s) => ({ uid: s.uid, name: s.displayName ?? '', studentId: s.studentId ?? '' })),
-    open: true, teacherUid, createdAt: serverTimestamp(),
+    conflictQ: !!conflictQ, open: true, teacherUid, createdAt: serverTimestamp(),
   });
 }
 
@@ -86,11 +90,19 @@ export async function deleteSurvey(id) {
   await deleteDoc(doc(db, 'relSurveys', id));
 }
 
-export const submitResponse = (survey, uid, answers) => setDoc(doc(db, 'relResponses', `${survey.id}_${uid}`), {
+export const submitResponse = (survey, uid, answers, conflicts = []) => setDoc(doc(db, 'relResponses', `${survey.id}_${uid}`), {
   surveyId: survey.id, classId: survey.classId, uid,
   answers: Object.fromEntries(survey.questionIds.map((q) => [q, (answers[q] ?? []).slice(0, survey.maxPicks)])),
+  ...(survey.conflictQ ? { conflicts: conflicts.slice(0, MAX_CONFLICTS).map((c) => ({ uid: c.uid, text: (c.text ?? '').trim().slice(0, 200) })) } : {}),
   submittedAt: serverTimestamp(),
 });
+
+// 학생이 적은 갈등 (관계도의 선택 수·무리 계산에는 넣지 않음) → [{ from, to, text, surveyId }]
+export function conflictsOf(survey, responses) {
+  const inRoster = new Set(survey.roster.map((s) => s.uid));
+  return responses.filter((r) => r.surveyId === survey.id && inRoster.has(r.uid)).flatMap((r) =>
+    (r.conflicts ?? []).filter((c) => c.uid !== r.uid && inRoster.has(c.uid)).map((c) => ({ from: r.uid, to: c.uid, text: c.text ?? '', surveyId: survey.id })));
+}
 
 export const addNote = (classId, n, teacherUid) => addDoc(collection(db, 'relNotes'), {
   classId, a: n.a, b: n.b, kind: n.kind, note: n.note.trim().slice(0, 200), date: n.date, teacherUid, createdAt: serverTimestamp(),

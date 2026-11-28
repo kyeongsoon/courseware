@@ -183,6 +183,10 @@ firebase deploy --only firestore:rules
   - **관계도**: 학생은 점(크기·숫자 = 받은 선택 수), 선택은 화살표, **서로 고른 관계는 굵은 선**. 친한 무리는 같은 색, **아무도 고르지 않은 학생**은 빨간 점선 테두리와 목록으로 표시. 질문별로 보거나 전체를 합쳐 볼 수 있고, 학생을 누르면 고른 친구·고른 사람을 봅니다.
   - **변화 보기**: '비교'에서 지난 회차를 고르면 새로 생긴 선택(초록)·사라진 선택(빨간 점선)과 학생별 받은 선택 수 변화를 보여 줍니다. **학생별 추이** 탭은 회차마다 받은 선택 수를 표로 보여 줍니다.
   - **관찰 기록**: 교사가 본 관계(친함·챙겨 줌·갈등·기타)를 두 학생 사이에 날짜·메모와 함께 남기고, 관계도에 점선으로 겹쳐 볼 수 있습니다.
+  - **갈등 질문 (선택)**: 회차를 시작할 때 '갈등 질문 넣기'를 켜면(기본 켜짐) 학생이 "최근 갈등이 있었거나 불편했던 친구"를 **2명까지** 고르고 무슨 일이 있었는지 짧게(200자) 쓸 수 있습니다. 답하지 않아도 됩니다. 학생 화면에 "선생님만 보고 친구에게 알려지지 않아요"라고 안내합니다.
+    - 갈등은 받은 선택 수·무리·'아무도 고르지 않은 학생' 계산에 넣지 않고, 관계도에서 **학생이 적은 갈등 보기**를 켤 때만 빨간 점선(적은 학생 → 상대)으로 보입니다. 오른쪽 목록과 학생 상세(누가 이 학생을 적었는지)에도 나옵니다.
+    - **관찰 기록 → 갈등 모아 보기**: 선생님 관찰의 '갈등'과 학생 응답의 갈등을 날짜순으로 한 목록에서 봅니다.
+    - 학교폭력으로 보이는 내용이 있으면 학교 규정에 따른 보고 의무가 생길 수 있으니 응답을 확인할 시간을 정해 두세요. 실명과 내용이 저장되므로 지난 회차는 학기 말에 삭제하는 것을 권장합니다(회차를 지우면 응답도 함께 지워짐).
 
 ## 학급운영 · 일정
 
@@ -328,9 +332,9 @@ attendance/{반_날짜_학생}   // 출결 (학생은 오늘 '출석'만 처음 
 classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
 classes/{id}.checkInOpen       // true 면 QR 없이 출석 허용
 relSurveys/{id}      // 교우관계 조사 회차 (교사가 만들고 그 반 학생이 읽음)
-  classId, title, questions[{id:'q1'|'q2'|'q3', text}], questionIds, maxPicks(3), roster[{uid,name,studentId}], open, teacherUid, createdAt
+  classId, title, questions[{id:'q1'|'q2'|'q3', text}], questionIds, maxPicks(3), roster[{uid,name,studentId}], conflictQ(갈등 질문), open, teacherUid, createdAt
 relResponses/{회차_학생}  // 응답 (학생은 자기 것만, 결과는 교사만)
-  surveyId, classId, uid, answers{q1:[uid…], …}, submittedAt
+  surveyId, classId, uid, answers{q1:[uid…], …}, conflicts[{uid, text}](갈등 질문, 최대 2), submittedAt
 relNotes/{id}        // 교사 관찰 기록 (교사만)
   classId, a, b, kind('close'|'care'|'conflict'|'other'), note, date, teacherUid, createdAt
 checkinCodes/{classId} // 출석 QR 코드 (교사만 읽고 씀, 20초마다 바뀜)

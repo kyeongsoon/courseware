@@ -347,10 +347,22 @@ service cloud.firestore {
       function picksOk(a, q, max) {
         return !(q in a) || (a[q] is list && a[q].size() <= max && !(request.auth.uid in a[q]));
       }
+      // 갈등 질문: 최대 2명, 자기 자신 안 됨, 내용 200자까지
+      function conflictOk(c) {
+        return c is map && c.keys().hasOnly(['uid', 'text']) && c.uid is string && c.uid != request.auth.uid
+          && c.text is string && c.text.size() <= 200;
+      }
+      function conflictsOk(d, s) {
+        return !('conflicts' in d)
+          || (s.get('conflictQ', false) == true && d.conflicts is list && d.conflicts.size() <= 2
+              && (d.conflicts.size() < 1 || conflictOk(d.conflicts[0]))
+              && (d.conflicts.size() < 2 || conflictOk(d.conflicts[1])));
+      }
       function validResponse() {
         let d = request.resource.data;
         let s = get(/databases/$(database)/documents/relSurveys/$(d.surveyId)).data;
-        return d.keys().hasOnly(['surveyId', 'classId', 'uid', 'answers', 'submittedAt'])
+        return d.keys().hasOnly(['surveyId', 'classId', 'uid', 'answers', 'conflicts', 'submittedAt'])
+          && conflictsOk(d, s)
           && responseId == d.surveyId + '_' + request.auth.uid
           && d.uid == request.auth.uid
           && d.classId == s.classId && inClass(d.classId)
@@ -362,6 +374,8 @@ service cloud.firestore {
       allow get: if isTeacher() || (signedIn() && responseId.split('_')[1] == request.auth.uid);
       allow list: if isTeacher();
       allow create, update: if signedIn() && !isTeacher() && validResponse();
+      // 교사: 학생 계정을 지울 때 다른 학생 응답에서 그 학생을 빼기 위해 고칠 수 있음
+      allow update: if isTeacher() && request.resource.data.surveyId == resource.data.surveyId && request.resource.data.uid == resource.data.uid;
       allow delete: if isTeacher();
     }
     // 교사 관찰 기록

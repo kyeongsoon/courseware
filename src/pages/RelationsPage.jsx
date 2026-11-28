@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Lock, Network, Plus, Send, Trash2, Unlock, UsersRound } from 'lucide-react';
+import { AlertTriangle, Eye, Lock, Network, Plus, Send, Trash2, Unlock, UsersRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
 import ClassGate from '../components/ClassGate';
@@ -9,7 +9,7 @@ import { useStudents } from '../useStudents';
 import { dateInt, dateLabel, fromInput, toInput } from '../attendance';
 import { formatDate } from '../util/dates';
 import {
-  DEFAULT_QUESTIONS, MAX_PICKS, NOTE_KINDS, addNote, compareEdges, createSurvey, degrees, deleteNote, deleteSurvey,
+  CONFLICT_QUESTION, DEFAULT_QUESTIONS, MAX_CONFLICTS, MAX_PICKS, conflictsOf, NOTE_KINDS, addNote, compareEdges, createSurvey, degrees, deleteNote, deleteSurvey,
   edgesOf, groupsOf, mutualPairs, setSurveyOpen, submitResponse, useMyResponse, useNotes, useResponses, useSurveys,
 } from '../relations';
 
@@ -34,6 +34,14 @@ function SurveyForm({ survey }) {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
   const cur = answers ?? mine?.answers ?? {};
+  const [conf, setConf] = useState(null); // [{ uid, text }]
+  const curConf = conf ?? mine?.conflicts ?? [];
+  const dirty = answers !== null || conf !== null;
+  const toggleConf = (uid) => {
+    const has = curConf.some((c) => c.uid === uid);
+    setConf(has ? curConf.filter((c) => c.uid !== uid) : curConf.length >= MAX_CONFLICTS ? curConf : [...curConf, { uid, text: '' }]);
+    setMsg('');
+  };
   const friends = survey.roster.filter((s) => s.uid !== user.uid).sort((a, b) => String(a.studentId).localeCompare(String(b.studentId)));
 
   const toggle = (q, uid) => {
@@ -45,8 +53,9 @@ function SurveyForm({ survey }) {
   const onSubmit = async () => {
     setBusy(true);
     try {
-      await submitResponse(survey, user.uid, cur);
+      await submitResponse(survey, user.uid, cur, curConf);
       setAnswers(null);
+      setConf(null);
       setMsg('제출했어요. 마감 전까지는 다시 고칠 수 있어요.');
     } catch (e) {
       setMsg(e.code === 'permission-denied' ? '제출할 수 없어요. 조사가 마감됐을 수 있어요.' : `실패: ${e.code ?? e.message}`);
@@ -60,7 +69,7 @@ function SurveyForm({ survey }) {
     <section className="panel rel-form">
       <h2><UsersRound size={18} className="h-icon" /> {survey.title}</h2>
       <p className="muted small"><Lock size={13} /> 내 응답은 <b>선생님만</b> 볼 수 있어요. 친구들은 볼 수 없어요. 질문마다 {survey.maxPicks}명까지 골라요 (안 골라도 돼요).</p>
-      {mine && !answers && <p className="info">제출했어요 ({formatDate(mine.submittedAt)}). 마감 전까지 고칠 수 있어요.</p>}
+      {mine && !dirty && <p className="info">제출했어요 ({formatDate(mine.submittedAt)}). 마감 전까지 고칠 수 있어요.</p>}
       {survey.questions.map((q, i) => (
         <fieldset key={q.id} className="rel-q">
           <legend>{i + 1}. {q.text} <span className="muted small">({(cur[q.id] ?? []).length}/{survey.maxPicks})</span></legend>
@@ -77,8 +86,31 @@ function SurveyForm({ survey }) {
           </div>
         </fieldset>
       ))}
+      {survey.conflictQ && (
+        <fieldset className="rel-q rel-q-conflict">
+          <legend><AlertTriangle size={15} /> (선택) {CONFLICT_QUESTION} <span className="muted small">({curConf.length}/{MAX_CONFLICTS})</span></legend>
+          <p className="small conflict-safe"><Lock size={13} /> 이 질문은 <b>선생님만</b> 보고, 친구에게는 절대 알려지지 않아요. 없으면 비워 두세요.</p>
+          <div className="chips">
+            {friends.map((f) => {
+              const on = curConf.some((c) => c.uid === f.uid);
+              return (
+                <button key={f.uid} type="button" className={`chip-btn conflict ${on ? 'on' : ''}`} disabled={!on && curConf.length >= MAX_CONFLICTS}
+                  aria-pressed={on} onClick={() => toggleConf(f.uid)}>{f.name}</button>
+              );
+            })}
+          </div>
+          {curConf.map((c) => (
+            <label key={c.uid} className="conflict-text">
+              <span className="small"><b>{friends.find((f) => f.uid === c.uid)?.name}</b>와(과) 무슨 일이 있었나요? (선택)</span>
+              <textarea rows={2} maxLength={200} value={c.text} placeholder="예: 모둠 활동 때 역할 때문에 말다툼을 했어요"
+                aria-label={`${friends.find((f) => f.uid === c.uid)?.name} 갈등 내용`}
+                onChange={(e) => setConf(curConf.map((x) => (x.uid === c.uid ? { ...x, text: e.target.value } : x)))} />
+            </label>
+          ))}
+        </fieldset>
+      )}
       {msg && <p className="info">{msg}</p>}
-      <div><button className="btn primary" onClick={onSubmit} disabled={busy || (mine && !answers)}><Send size={16} /> {mine ? '고쳐서 제출' : '제출'}</button></div>
+      <div><button className="btn primary" onClick={onSubmit} disabled={busy || (mine && !dirty)}><Send size={16} /> {mine ? '고쳐서 제출' : '제출'}</button></div>
     </section>
   );
 }
@@ -118,6 +150,7 @@ function GraphTab({ surveys, responses, notes }) {
   const [question, setQuestion] = useState('all');
   const [prevId, setPrevId] = useState('');
   const [showNotes, setShowNotes] = useState(false);
+  const [showConflicts, setShowConflicts] = useState(false);
   const [selected, setSelected] = useState(null);
   const prev = surveys.find((s) => s.id === prevId && s.id !== survey?.id);
 
@@ -140,7 +173,7 @@ function GraphTab({ surveys, responses, notes }) {
         layout: [...edges, ...c.removed],
       };
     }
-    return { roster, edges, deg, groups, answered, cmp };
+    return { roster, edges, deg, groups, answered, cmp, conflicts: conflictsOf(survey, responses) };
   }, [survey, responses, question, prev]);
 
   if (!survey) return <p className="muted">아직 조사가 없어요. '조사 관리'에서 첫 조사를 시작하세요.</p>;
@@ -173,13 +206,14 @@ function GraphTab({ surveys, responses, notes }) {
           </select>
         </label>
         <label className="check-line small"><input type="checkbox" checked={showNotes} onChange={(e) => setShowNotes(e.target.checked)} /> 관찰 기록 겹쳐 보기</label>
+        {survey.conflictQ && <label className="check-line small"><input type="checkbox" checked={showConflicts} onChange={(e) => setShowConflicts(e.target.checked)} /> 학생이 적은 갈등 보기 ({data.conflicts.length})</label>}
         <span className="muted small">응답 {data.answered.size} / {data.roster.length}명</span>
       </div>
 
       <div className="rel-layout">
         <div className="rel-canvas">
           <RelationGraph roster={data.roster} edges={data.cmp ? data.cmp.edges : data.edges} layoutEdges={data.cmp ? data.cmp.layout : data.edges}
-            deg={data.deg} groups={data.groups} notes={visibleNotes} selected={selected} onSelect={setSelected} compare={!!data.cmp} />
+            deg={data.deg} groups={data.groups} notes={visibleNotes} conflicts={showConflicts ? data.conflicts : []} selected={selected} onSelect={setSelected} compare={!!data.cmp} />
           <div className="rel-legend small">
             {data.cmp ? (
               <>
@@ -195,13 +229,14 @@ function GraphTab({ surveys, responses, notes }) {
                 <span><i className="lg-ring" /> 아무도 고르지 않음</span>
               </>
             )}
+            {showConflicts && <span><i className="lg-line dashed" style={{ borderColor: '#dc2626' }} /> 학생이 적은 갈등 (적은 학생 → 상대)</span>}
             {showNotes && Object.entries(NOTE_KINDS).map(([k, v]) => <span key={k}><i className="lg-line dotted" style={{ borderColor: v.color }} /> {v.label}</span>)}
           </div>
         </div>
 
         <aside className="rel-side">
           {sel ? (
-            <StudentDetail s={sel} survey={survey} responses={responses} names={names} deg={data.deg} notes={notes} cmp={data.cmp} onClose={() => setSelected(null)} />
+            <StudentDetail s={sel} survey={survey} responses={responses} names={names} deg={data.deg} notes={notes} cmp={data.cmp} conflicts={data.conflicts} onClose={() => setSelected(null)} />
           ) : (
             <>
               {data.cmp && (
@@ -209,6 +244,16 @@ function GraphTab({ surveys, responses, notes }) {
                   <h3>{prev.title} → {survey.title}</h3>
                   <p className="small">새로 생긴 선택 <b className="good">{data.cmp.added.length}</b> · 사라진 선택 <b className="bad">{data.cmp.removed.length}</b> · 그대로 {data.cmp.kept.length}</p>
                   <ChangeList roster={data.roster} deg={data.deg} prevDeg={data.cmp.prevDeg} />
+                </div>
+              )}
+              {survey.conflictQ && (
+                <div className="rel-box conflict-box">
+                  <h3><AlertTriangle size={15} /> 학생이 적은 갈등 ({data.conflicts.length})</h3>
+                  {data.conflicts.length ? (
+                    <More as="ul" items={data.conflicts} limit={5} render={(c) => (
+                      <li key={`${c.from}>${c.to}`}><b>{names[c.from]}</b> → <b>{names[c.to]}</b>{c.text ? `: ${c.text}` : ''}</li>
+                    )} />
+                  ) : <p className="small muted">이번 회차에는 없어요.</p>}
                 </div>
               )}
               <div className={`rel-box ${lonely.length ? 'warn-box' : ''}`}>
@@ -248,7 +293,9 @@ function ChangeList({ roster, deg, prevDeg }) {
   );
 }
 
-function StudentDetail({ s, survey, responses, names, deg, notes, cmp, onClose }) {
+function StudentDetail({ s, survey, responses, names, deg, notes, cmp, conflicts = [], onClose }) {
+  const wrote = conflicts.filter((c) => c.from === s.uid);
+  const about = conflicts.filter((c) => c.to === s.uid);
   const mine = responses.find((r) => r.surveyId === survey.id && r.uid === s.uid);
   const pickedBy = survey.questions.map((q) => ({
     q, who: responses.filter((r) => r.surveyId === survey.id && (r.answers?.[q.id] ?? []).includes(s.uid)).map((r) => names[r.uid]).filter(Boolean),
@@ -268,6 +315,15 @@ function StudentDetail({ s, survey, responses, names, deg, notes, cmp, onClose }
       <ul className="small rel-picks">
         {pickedBy.map(({ q, who }, i) => <li key={q.id}><span className="muted">{i + 1}. {q.text}:</span> {who.join(', ') || '없음'}</li>)}
       </ul>
+      {survey.conflictQ && (wrote.length > 0 || about.length > 0) && (
+        <>
+          <h4 className="bad">갈등 (학생 응답)</h4>
+          <ul className="small rel-picks">
+            {wrote.map((c) => <li key={`w${c.to}`}>이 학생이 적음 → <b>{names[c.to]}</b>{c.text ? `: ${c.text}` : ''}</li>)}
+            {about.map((c) => <li key={`a${c.from}`}><b>{names[c.from]}</b>이(가) 이 학생을 적음{c.text ? `: ${c.text}` : ''}</li>)}
+          </ul>
+        </>
+      )}
       {myNotes.length > 0 && (
         <>
           <h4>관찰 기록</h4>
@@ -329,6 +385,7 @@ function ManageTab({ surveys, responses, roster }) {
   const m = Math.floor(dateInt() / 100) % 100;
   const [title, setTitle] = useState(`${m}월 교우관계 조사`);
   const [questions, setQuestions] = useState(DEFAULT_QUESTIONS.map((q) => ({ ...q })));
+  const [conflictQ, setConflictQ] = useState(true);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
 
@@ -337,7 +394,7 @@ function ManageTab({ surveys, responses, roster }) {
     if (!roster.length) return setMsg('이 반에 학생이 없어요.');
     setBusy(true);
     try {
-      await createSurvey(classId, { title, questions, roster }, user.uid);
+      await createSurvey(classId, { title, questions, roster, conflictQ }, user.uid);
       setMsg(`'${title}'을 시작했어요. 학생 홈에 응답 안내가 보여요.`);
     } catch (err) {
       setMsg(`실패: ${err.code ?? err.message}`);
@@ -356,6 +413,8 @@ function ManageTab({ surveys, responses, roster }) {
             <input value={q.text} maxLength={60} onChange={(e) => setQuestions(questions.map((x, j) => (j === i ? { ...x, text: e.target.value } : x)))} aria-label={`질문 ${i + 1}`} />
           </label>
         ))}
+        <label className="check-line small"><input type="checkbox" checked={conflictQ} onChange={(e) => setConflictQ(e.target.checked)} />
+          갈등 질문 넣기 — "{CONFLICT_QUESTION}" ({MAX_CONFLICTS}명까지, 무슨 일이 있었는지 짧게, 답하지 않아도 됨)</label>
         <p className="muted small">질문마다 {MAX_PICKS}명까지 고르고, 지금 반 명단({roster.length}명)으로 시작해요. 회차를 비교하려면 질문 순서를 같게 두세요.</p>
         <div><button className="btn primary" disabled={busy}>조사 시작</button></div>
         {msg && <p className="info">{msg}</p>}
@@ -370,7 +429,7 @@ function ManageTab({ surveys, responses, roster }) {
           return (
             <li key={s.id} className="rel-round">
               <div className="item-main">
-                <span className="item-title">{s.title} {s.open ? <span className="tag done">진행 중</span> : <span className="tag muted-tag">마감</span>}</span>
+                <span className="item-title">{s.title} {s.conflictQ && <span className="tag muted-tag">갈등 질문</span>} {s.open ? <span className="tag done">진행 중</span> : <span className="tag muted-tag">마감</span>}</span>
                 <span className="muted small">{formatDate(s.createdAt)} · 응답 {done.size} / {s.roster.length}명</span>
                 {s.open && missing.length > 0 && <span className="small">아직 안 한 학생: {missing.map((r) => r.name).join(', ')}</span>}
               </div>
@@ -387,13 +446,25 @@ function ManageTab({ surveys, responses, roster }) {
 }
 
 // ── 교사: 관찰 기록 ──
-function NotesTab({ notes, roster }) {
+function NotesTab({ notes, roster, surveys, responses }) {
   const { user } = useAuth();
   const { classId } = useCurrentClass();
   const sorted = [...roster].sort((a, b) => String(a.studentId).localeCompare(String(b.studentId)));
   const names = Object.fromEntries(roster.map((s) => [s.uid, s.displayName]));
   const [n, setN] = useState({ a: '', b: '', kind: 'close', note: '', date: dateInt() });
   const [err, setErr] = useState('');
+  const [onlyConflict, setOnlyConflict] = useState(false);
+  // 선생님 관찰 기록의 '갈등' + 학생 응답의 갈등을 날짜순으로 한 목록에
+  const conflictRows = [
+    ...notes.filter((x) => x.kind === 'conflict').map((x) => ({ key: x.id, date: x.date, by: 'teacher', a: x.a, b: x.b, text: x.note })),
+    ...surveys.filter((sv) => sv.conflictQ).flatMap((sv) => {
+      const rn = Object.fromEntries(sv.roster.map((r) => [r.uid, r.name]));
+      return conflictsOf(sv, responses).map((c) => ({
+        key: `${sv.id}-${c.from}-${c.to}`, date: sv.createdAt?.toDate ? dateInt(sv.createdAt.toDate()) : dateInt(), by: 'student', round: sv.title,
+        a: c.from, b: c.to, aName: rn[c.from], bName: rn[c.to], text: c.text,
+      }));
+    }),
+  ].sort((x, y) => y.date - x.date);
   const onAdd = async (e) => {
     e.preventDefault();
     if (!n.a || !n.b || n.a === n.b) return setErr('서로 다른 두 학생을 골라 주세요.');
@@ -421,7 +492,23 @@ function NotesTab({ notes, roster }) {
       </form>
       {err && <p className="error">{err}</p>}
       <p className="muted small"><Eye size={13} /> 관찰 기록은 선생님만 봐요. 관계도에서 '관찰 기록 겹쳐 보기'를 켜면 점선으로 보여요.</p>
-      {notes.length === 0 ? <p className="muted">아직 기록이 없어요.</p> : (
+      <div className="tabs small-tabs" role="tablist" aria-label="기록 보기">
+        <button role="tab" aria-selected={!onlyConflict} className={`tab ${!onlyConflict ? 'on' : ''}`} onClick={() => setOnlyConflict(false)}>관찰 기록</button>
+        <button role="tab" aria-selected={onlyConflict} className={`tab ${onlyConflict ? 'on' : ''}`} onClick={() => setOnlyConflict(true)}>갈등 모아 보기 ({conflictRows.length})</button>
+      </div>
+      {onlyConflict ? (
+        conflictRows.length === 0 ? <p className="muted">갈등 기록이 없어요.</p> : (
+          <ul className="item-list">
+            {conflictRows.map((r) => (
+              <li key={r.key}>
+                <span className="muted small">{dateLabel(r.date)}</span>{' '}
+                <span className={`tag ${r.by === 'teacher' ? '' : 'warn'}`}>{r.by === 'teacher' ? '선생님 관찰' : `학생 응답 · ${r.round}`}</span>{' '}
+                <b>{names[r.a] ?? r.aName ?? '(명단에 없음)'}</b> {r.by === 'teacher' ? '–' : '→'} <b>{names[r.b] ?? r.bName ?? '(명단에 없음)'}</b> {r.text}
+              </li>
+            ))}
+          </ul>
+        )
+      ) : notes.length === 0 ? <p className="muted">아직 기록이 없어요.</p> : (
         <ul className="item-list">
           {notes.map((x) => (
             <li key={x.id} className="row between">
@@ -460,7 +547,7 @@ function TeacherRelations() {
       {tab === 'graph' && <GraphTab key={classId} surveys={surveys} responses={responses} notes={notes} />}
       {tab === 'trend' && <TrendTab surveys={surveys} responses={responses} />}
       {tab === 'manage' && <ManageTab surveys={surveys} responses={responses} roster={roster} />}
-      {tab === 'notes' && <NotesTab notes={notes} roster={roster} />}
+      {tab === 'notes' && <NotesTab notes={notes} roster={roster} surveys={surveys} responses={responses} />}
       <p className="muted small rel-foot"><Lock size={13} /> 조사 응답과 관계도는 선생님만 볼 수 있어요. 학생 상담·자리 배치 참고용으로 쓰고, 학생에게 결과를 보여 주지 마세요.</p>
     </section>
   );

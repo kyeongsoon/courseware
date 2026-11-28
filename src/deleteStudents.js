@@ -28,7 +28,8 @@ async function loadShared() {
     getDocs(collection(db, 'seating')),
     getDocs(collection(db, 'relSurveys')),
   ]);
-  return { notices: notices.docs, polls: polls.docs, seating: seating.docs, surveys: surveys.docs };
+  const responses = await getDocs(collection(db, 'relResponses'));
+  return { notices: notices.docs, polls: polls.docs, seating: seating.docs, surveys: surveys.docs, responses: responses.docs };
 }
 
 async function removeRecords(uid, shared) {
@@ -36,11 +37,29 @@ async function removeRecords(uid, shared) {
   await deleteAll(query(collection(db, 'counsel'), where('studentUid', '==', uid)));
   // 교우관계: 그 학생의 응답과 관찰 기록, 조사 명단에서 이름 빼기
   await deleteAll(query(collection(db, 'relResponses'), where('uid', '==', uid)));
+  // 다른 학생 응답에서 그 학생을 고른 것·갈등으로 적은 것 빼기
+  for (const r of shared.responses) {
+    const d = (shared.resData ??= new Map()).get(r.id) ?? r.data();
+    shared.resData.set(r.id, d);
+    if (d.uid === uid || shared.removed?.has(d.uid)) continue; // 지운(지울) 학생의 응답은 건너뜀
+    const answers = Object.fromEntries(Object.entries(d.answers ?? {}).map(([q, l]) => [q, l.filter((x) => x !== uid)]));
+    const conflicts = (d.conflicts ?? []).filter((c) => c.uid !== uid);
+    if (JSON.stringify(answers) !== JSON.stringify(d.answers ?? {}) || conflicts.length !== (d.conflicts ?? []).length) {
+      await updateDoc(r.ref, { answers, ...(d.conflicts ? { conflicts } : {}) });
+      d.answers = answers; // 같은 목록으로 다음 학생을 지울 때 최신 내용 기준으로
+      if (d.conflicts) d.conflicts = conflicts;
+    }
+  }
   await deleteAll(query(collection(db, 'relNotes'), where('a', '==', uid)));
   await deleteAll(query(collection(db, 'relNotes'), where('b', '==', uid)));
   for (const s of shared.surveys) {
-    const roster = s.data().roster ?? [];
-    if (roster.some((r) => r.uid === uid)) await updateDoc(s.ref, { roster: roster.filter((r) => r.uid !== uid) });
+    const d = (shared.surveyData ??= new Map()).get(s.id) ?? s.data();
+    shared.surveyData.set(s.id, d);
+    const roster = d.roster ?? [];
+    if (roster.some((r) => r.uid === uid)) {
+      d.roster = roster.filter((r) => r.uid !== uid); // 여러 명을 지울 때 앞에서 뺀 학생이 되살아나지 않게
+      await updateDoc(s.ref, { roster: d.roster });
+    }
   }
   // 없는 문서를 지워도 오류가 아니므로 공지·설문마다 그 학생 문서를 지움
   await Promise.all([
@@ -62,6 +81,7 @@ async function removeRecords(uid, shared) {
 
 export async function deleteStudents(students, onProgress = () => {}) {
   const shared = await loadShared();
+  shared.removed = new Set(students.map((s) => s.uid));
   const results = [];
   for (const [k, s] of students.entries()) {
     onProgress(k, students.length);
