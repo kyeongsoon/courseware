@@ -67,15 +67,17 @@ function buildSections({ isTeacher, hasPassword }) {
       ],
     });
   }
-  if (hasPassword) {
-    sections.push({ title: '설정', items: [{ to: '/change-password', label: '비밀번호 변경', icon: KeyRound }] });
-  }
+  const settingItems = [];
+  if (isTeacher) settingItems.push({ to: '/teacher/school', label: '학교 설정 (나이스)', icon: School });
+  if (hasPassword) settingItems.push({ to: '/change-password', label: '비밀번호 변경', icon: KeyRound });
+  if (settingItems.length) sections.push({ title: '설정', items: settingItems });
   return sections;
 }
 
 export function usePageTitle() {
   const { pathname } = useLocation();
   if (pathname.startsWith('/teacher/classes')) return '반 관리';
+  if (pathname.startsWith('/teacher/school')) return '학교 설정';
   if (pathname.startsWith('/notices')) return '알림장';
   if (pathname.startsWith('/polls')) return '설문·투표';
   if (pathname.startsWith('/counsel')) return '상담';

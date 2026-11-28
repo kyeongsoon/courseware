@@ -530,3 +530,9 @@ input[type='date'], input[type='month'], input[type='time'], input[type='number'
   .cal-ev { font-size: 0.65rem; padding: 1px 3px; }
   .tt .tt-p { width: 70px; }
 }
+
+/* ───── 나이스 연동 ───── */
+.school-list { display: flex; flex-direction: column; gap: 6px; }
+.school-list li + li { border-top: none; }
+.neis-box { border: 1px dashed var(--accent); background: var(--primary-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.neis-preview { max-height: 280px; overflow-y: auto; }

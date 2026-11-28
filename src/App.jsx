@@ -21,6 +21,7 @@ import AttendancePage from './pages/AttendancePage';
 import SeatingPage from './pages/SeatingPage';
 import CalendarPage from './pages/CalendarPage';
 import TimetablePage from './pages/TimetablePage';
+import SchoolSettingsPage from './pages/SchoolSettingsPage';
 import ClassesPage from './pages/ClassesPage';
 import ClassDetailPage from './pages/ClassDetailPage';
 import TeacherLessonsPage from './pages/TeacherLessonsPage';
@@ -63,6 +64,7 @@ export default function App() {
                 <Route path="/teacher/lessons/:lessonId/edit" element={<ProtectedRoute requireTeacher><LessonEditorPage key="edit" /></ProtectedRoute>} />
               </>
             )}
+            <Route path="/teacher/school" element={<ProtectedRoute requireTeacher><SchoolSettingsPage /></ProtectedRoute>} />
             <Route path="/teacher/classes" element={<ProtectedRoute requireTeacher><ClassesPage /></ProtectedRoute>} />
             <Route path="/teacher/classes/:classId" element={<ProtectedRoute requireTeacher><ClassDetailPage /></ProtectedRoute>} />
             <Route path="/teacher/students" element={<ProtectedRoute requireTeacher><StudentsPage /></ProtectedRoute>} />

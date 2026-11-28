@@ -338,6 +338,11 @@ service cloud.firestore {
         && request.resource.data.times.size() == request.resource.data.periods;
     }
 
+    // 학교 설정 (나이스 학교 코드·API 키): 교사만
+    match /settings/{settingId} {
+      allow read, write: if isTeacher();
+    }
+
     // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)
     match /{document=**} {
       allow read, write: if false;
