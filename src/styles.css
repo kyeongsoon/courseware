@@ -544,3 +544,61 @@ input[type='date'], input[type='month'], input[type='time'], input[type='number'
 .sync-status.bad { background: #fdecec; }
 .sync-status ul { margin: 6px 0 0; padding-left: 18px; }
 .sync-status p { margin: 4px 0 0; }
+
+/* ── 출석 QR (교사 화면) ── */
+.qr-screen {
+  position: fixed; inset: 0; z-index: 100; background: var(--surface); display: flex; flex-direction: column;
+  padding: 24px 32px; gap: 16px; overflow: auto;
+}
+.qr-top { display: flex; align-items: center; justify-content: space-between; }
+.qr-top h2 { display: flex; align-items: center; gap: 8px; font-size: 1.5rem; margin: 0; }
+.qr-body { flex: 1; display: flex; align-items: center; justify-content: center; gap: 48px; flex-wrap: wrap; }
+.qr-left { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.qr-img { width: min(62vh, 80vw); height: min(62vh, 80vw); image-rendering: pixelated; border-radius: 12px; }
+.qr-wait { display: grid; place-items: center; background: var(--field); color: var(--muted); }
+.qr-howto { font-size: 1.1rem; color: var(--text-2); text-align: center; }
+.qr-right { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 260px; }
+.qr-code { font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 800; letter-spacing: 0.08em; margin: 0; font-variant-numeric: tabular-nums; }
+.qr-bar { width: 100%; height: 8px; border-radius: 99px; background: var(--field); overflow: hidden; }
+.qr-bar span { display: block; height: 100%; background: var(--accent); transition: width 0.25s linear; }
+.qr-count { font-size: 1.4rem; margin: 16px 0 4px; }
+.qr-count b { font-size: 2.2rem; color: var(--primary); }
+.qr-recent { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 1.05rem; }
+
+/* ── 출석 QR 찍기 (학생) ── */
+.modal-back { position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, 0.5); display: grid; place-items: center; padding: 16px; }
+.modal { background: var(--surface); border-radius: 16px; padding: 20px; width: min(440px, 100%); max-height: calc(100vh - 32px); overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.modal .panel-head { margin: 0; }
+.scan-box { position: relative; width: 100%; aspect-ratio: 1; background: #000; border-radius: 12px; overflow: hidden; }
+.scan-box video { width: 100%; height: 100%; object-fit: cover; }
+.scan-frame { position: absolute; inset: 15%; border: 3px solid rgba(255, 255, 255, 0.9); border-radius: 16px; box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35); }
+.code-input { font-size: 1.2rem; letter-spacing: 0.15em; text-align: center; }
+.checkin-link { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+.checkin-big { display: flex; align-items: center; gap: 12px; font-size: 1.6rem; font-weight: 700; margin: 8px 0; }
+.checkin-big.ok { color: var(--primary); }
+.checkin-big.bad { color: var(--error); }
+
+/* ── 자리표 인쇄 (A4 가로 한 장) ── */
+.print-sheet { display: none; }
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body { background: #fff !important; }
+  body > *:not(.print-sheet) { display: none !important; }
+  .print-sheet { display: block; color: #000; font-family: inherit; }
+  .print-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6mm; }
+  .print-head h1 { font-size: 20pt; margin: 0; }
+  .print-head span { font-size: 10pt; color: #444; }
+  .print-sheet .seat-board { gap: 4mm; }
+  .print-sheet .seat-grid { gap: 2.5mm; }
+  .print-sheet .seat {
+    min-height: 19mm; border: 1.2pt solid #000 !important; background: #fff !important; color: #000 !important;
+    border-radius: 2mm; box-shadow: none !important; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .print-sheet .seat.blocked { border: 1pt dashed #bbb !important; }
+  .print-sheet .seat-name { font-size: 15pt; color: #000 !important; max-width: none; }
+  .print-sheet .seat-id { font-size: 9pt; color: #444 !important; }
+  .print-sheet .seat-empty { color: #999 !important; }
+  .print-sheet .desk { border: 1.2pt solid #000 !important; background: #eee !important; color: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+.check-line input[type='checkbox'] { width: 16px; height: 16px; padding: 0; margin: 0; flex: none; accent-color: var(--primary); }
+.check-line.small { align-items: center; white-space: nowrap; }

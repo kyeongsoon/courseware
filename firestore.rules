@@ -276,10 +276,24 @@ service cloud.firestore {
           && isStr(d.note, 0, 200)
           && d.by in ['self', 'teacher'];
       }
+      // 교실 화면의 출석 코드가 맞는지: 지금 코드나 직전 코드, 만든 지 45초 안 (학생은 코드 문서를 못 읽음)
+      function codeMatches(code, c) {
+        return (c.code is string && c.code.size() == 6 && code == c.code
+                  && c.issuedAt is timestamp && request.time < c.issuedAt + duration.value(45, 's'))
+          || (c.prevCode is string && c.prevCode.size() == 6 && code == c.prevCode
+                  && c.prevIssuedAt is timestamp && request.time < c.prevIssuedAt + duration.value(45, 's'));
+      }
+      function codeOk(d) {
+        return get(/databases/$(database)/documents/classes/$(d.classId)).data.get('checkInOpen', false) == true
+          || (d.get('code', '') is string && d.get('code', '').size() == 6
+              && exists(/databases/$(database)/documents/checkinCodes/$(d.classId))
+              && codeMatches(d.code, get(/databases/$(database)/documents/checkinCodes/$(d.classId)).data));
+      }
       // 학생: 오늘, 자기 반, 자기 이름으로 '출석'만 처음 한 번 기록 (교사가 먼저 적어 둔 날은 못 덮어씀)
+      // 교실 화면의 출석 코드(QR)가 있어야 함 (반 설정에서 '코드 없이 허용'을 켠 날은 빼고)
       function validCheckIn() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['classId', 'uid', 'date', 'month', 'name', 'studentId', 'status', 'reason', 'note', 'by', 'checkedAt'])
+        return d.keys().hasOnly(['classId', 'uid', 'date', 'month', 'name', 'studentId', 'status', 'reason', 'note', 'by', 'code', 'checkedAt'])
           && d.uid == request.auth.uid
           && inClass(d.classId)
           && d.date == todayKst()
@@ -287,12 +301,18 @@ service cloud.firestore {
           && attendanceId == d.classId + '_' + string(d.date) + '_' + d.uid
           && isMyName(d)
           && d.status == 'present' && d.reason == '' && d.note == '' && d.by == 'self'
-          && d.checkedAt == request.time;
+          && d.checkedAt == request.time
+          && codeOk(d);
       }
       allow read: if isTeacher() || (signedIn() && resource.data.uid == request.auth.uid);
       allow create: if (isTeacher() && validByTeacher()) || (signedIn() && validCheckIn());
       allow update: if isTeacher() && validByTeacher();
       allow delete: if isTeacher();
+    }
+
+    // 출석 코드: 교사 화면만 읽고 씀 (학생 출석 기록의 코드 확인은 위 규칙에서 get 으로)
+    match /checkinCodes/{classId} {
+      allow read, write: if isTeacher();
     }
 
     // 자리표: 반마다 하나. 교사가 만들고, 공개하면 그 반 학생이 봄

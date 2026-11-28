@@ -82,6 +82,7 @@ export function usePageTitle() {
   if (pathname.startsWith('/polls')) return '설문·투표';
   if (pathname.startsWith('/counsel')) return '상담';
   if (pathname.startsWith('/attendance')) return '출결';
+  if (pathname.startsWith('/checkin')) return '출석';
   if (pathname.startsWith('/seating')) return '자리표';
   if (pathname.startsWith('/calendar')) return '학급 달력';
   if (pathname.startsWith('/timetable')) return '시간표';
