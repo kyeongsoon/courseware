@@ -85,7 +85,9 @@ export async function createStudentAccounts(students, teacherUid, onProgress = (
         await signOut(secondaryAuth);
         results.push({ ...s, ok: true });
       } catch (err) {
-        const msg = err.code === 'auth/email-already-in-use' ? '이미 있는 아이디' : err.code ?? err.message;
+        const msg = err.code === 'auth/email-already-in-use'
+          ? '이미 있는 아이디 (삭제한 학생이면 Firebase 콘솔 Authentication에서 그 계정을 지운 뒤 다시 만드세요)'
+          : err.code ?? err.message;
         results.push({ ...s, ok: false, error: msg });
       }
       onProgress(results.length, students.length);

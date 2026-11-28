@@ -39,7 +39,7 @@ service cloud.firestore {
       // 본인 수정: 역할·소속 반·계정 정보는 변경 불가 (권한 상승·반 이동 방지)
       allow update: if signedIn() && request.auth.uid == uid
         && !request.resource.data.diff(resource.data).affectedKeys()
-              .hasAny(['role', 'uid', 'createdAt', 'classId', 'loginId', 'createdBy']);
+              .hasAny(['role', 'uid', 'createdAt', 'classId', 'loginId', 'createdBy', 'deleted', 'deletedAt']);
 
       // 교사가 학생 계정 문서를 대신 생성 (역할은 student 만 가능)
       allow create: if isTeacher() && request.resource.data.role == 'student';
