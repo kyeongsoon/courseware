@@ -15,6 +15,17 @@ import {
 
 const nameMap = (roster) => Object.fromEntries(roster.map((s) => [s.uid, s.name]));
 
+// 긴 목록은 앞부분만 보이고 '모두 보기'로 펼침
+function More({ items, limit = 8, render = (x) => x, sep = ', ', as = 'p' }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? items : items.slice(0, limit);
+  const btn = items.length > limit && (
+    <button type="button" className="link-btn" onClick={() => setAll(!all)}>{all ? '접기' : `… 모두 보기 (${items.length})`}</button>
+  );
+  if (as === 'ul') return <><ul className="rel-changes small">{shown.map(render)}</ul>{btn}</>;
+  return <p className="small">{shown.map(render).join(sep)} {btn}</p>;
+}
+
 // ── 학생: 조사 응답 ──
 function SurveyForm({ survey }) {
   const { user } = useAuth();
@@ -207,7 +218,7 @@ function GraphTab({ surveys, responses, notes }) {
               </div>
               <div className="rel-box">
                 <h3>서로 고른 짝 ({pairs.length})</h3>
-                <p className="small">{pairs.length ? pairs.map(([a, b]) => `${names[a]}↔${names[b]}`).join(', ') : '아직 없어요'}</p>
+                {pairs.length ? <More items={pairs} render={([a, b]) => `${names[a]}↔${names[b]}`} /> : <p className="small">아직 없어요</p>}
               </div>
               <div className="rel-box">
                 <h3>무리</h3>
@@ -227,14 +238,13 @@ function GraphTab({ surveys, responses, notes }) {
 }
 
 function ChangeList({ roster, deg, prevDeg }) {
-  const rows = roster.map((s) => ({ s, d: deg[s.uid].inn - (prevDeg[s.uid]?.inn ?? 0) })).filter((r) => r.d !== 0).sort((a, b) => a.d - b.d);
+  // 많이 줄어든 학생(먼저 살펴볼 학생)부터
+  const rows = roster.map((s) => ({ s, d: deg[s.uid].inn - (prevDeg[s.uid]?.inn ?? 0) })).filter((r) => r.d !== 0).sort((a, b) => a.d - b.d || b.s.name.localeCompare(a.s.name));
   if (!rows.length) return <p className="muted small">받은 선택 수가 바뀐 학생이 없어요.</p>;
   return (
-    <ul className="rel-changes small">
-      {rows.map(({ s, d }) => (
-        <li key={s.uid}>{s.name} <span className={d > 0 ? 'good' : 'bad'}>{prevDeg[s.uid]?.inn ?? 0} → {deg[s.uid].inn} ({d > 0 ? `+${d}` : d})</span></li>
-      ))}
-    </ul>
+    <More as="ul" items={rows} limit={6} render={({ s, d }) => (
+      <li key={s.uid}>{s.name} <span className={d > 0 ? 'good' : 'bad'}>{prevDeg[s.uid]?.inn ?? 0} → {deg[s.uid].inn} ({d > 0 ? `+${d}` : d})</span></li>
+    )} />
   );
 }
 
