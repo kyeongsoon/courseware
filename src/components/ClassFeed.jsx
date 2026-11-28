@@ -42,7 +42,7 @@ export default function ClassFeed() {
 
   if (!classId) return null;
   return (
-    <div className="feed">
+    <div className="feed class-feed">
       <section className="panel">
         <div className="panel-head">
           <h2><Megaphone size={18} className="h-icon" /> 알림장{isTeacher && className ? <span className="muted"> · {className}</span> : null}</h2>

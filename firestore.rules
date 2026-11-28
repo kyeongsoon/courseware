@@ -307,6 +307,37 @@ service cloud.firestore {
         && request.resource.data.published is bool;
     }
 
+    // ───── 학급운영: 일정 ─────
+
+    // 학급 달력 일정: 교사가 쓰고 그 반 학생이 봄
+    match /events/{eventId} {
+      function validEvent() {
+        let d = request.resource.data;
+        return isStr(d.classId, 1, 100)
+          && isStr(d.title, 1, 100)
+          && d.type in ['시험', '수행평가', '행사', '과제', '기타']
+          && d.date is int && d.date >= 20000101 && d.date <= 21001231
+          && d.endDate is int && d.endDate >= d.date && d.endDate <= 21001231
+          && isStr(d.note, 0, 1000)
+          && d.teacherUid == request.auth.uid;
+      }
+      allow read: if isTeacher() || inClass(resource.data.classId);
+      allow create, update: if isTeacher() && validEvent();
+      allow delete: if isTeacher();
+    }
+
+    // 시간표: 반마다 하나
+    match /timetables/{classId} {
+      allow read: if isTeacher() || inClass(classId);
+      allow write: if isTeacher()
+        && request.resource.data.days is int && request.resource.data.days >= 5 && request.resource.data.days <= 6
+        && request.resource.data.periods is int && request.resource.data.periods >= 1 && request.resource.data.periods <= 10
+        && request.resource.data.cells is list
+        && request.resource.data.cells.size() == request.resource.data.days * request.resource.data.periods
+        && request.resource.data.times is list
+        && request.resource.data.times.size() == request.resource.data.periods;
+    }
+
     // 그 외 컬렉션은 기본 차단 (기능 추가 시 규칙도 함께 추가)
     match /{document=**} {
       allow read, write: if false;
