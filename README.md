@@ -179,6 +179,21 @@ firebase deploy --only firestore:rules
 - **시간표**: 교사가 **시간표 만들기**로 월~금(또는 월~토), 1~10교시의 과목·교실과 교시별 시간(예: `09:00-09:45`)을 입력합니다.
   오늘 요일과 **지금 수업**이 강조되고, 홈에 **오늘 시간표**가 보입니다 (한국 시각 기준, 1분마다 갱신).
 
+### 나이스(NEIS) 연동 — 학사일정·시간표 가져오기
+
+나이스 교육정보 개방 포털(open.neis.go.kr)의 공개 API를 **브라우저에서 바로** 불러옵니다 (서버·Blaze 요금제 필요 없음).
+
+1. [나이스 포털](https://open.neis.go.kr/portal/guide/actKeyPage.do)에서 회원가입 → 인증키 신청(무료)으로 API 키를 받습니다.
+   키가 없으면 한 번에 5건까지만 받아져서 실제로는 키가 필요합니다.
+2. 사이드바 **설정 → 학교 설정 (나이스)** 에서 API 키를 넣고, 학교 이름으로 찾아 고른 뒤 **저장**합니다.
+   키와 학교 정보는 Firestore `settings/school` 에 저장되고 **교사만** 읽을 수 있습니다 (사이트 코드에 들어가지 않음).
+3. **학급 달력 → 나이스 학사일정**: 기간(기본은 올해 학년도 3월~2월)을 고르고 **나이스에서 불러오기** → 미리보기 → **달력에 넣기**.
+   - 반 이름(예: `3학년 1반`)에서 학년을 읽어 그 학년 일정과 전교 일정만 가져옵니다. 토요휴업일은 기본으로 뺍니다.
+   - 같은 이름의 연속된 날(주말 사이 포함)은 하나의 여러 날 일정으로 합칩니다. 이름에 고사·시험·평가가 있으면 '시험', 휴업·공휴일·재량은 '기타', 나머지는 '행사'.
+   - 다시 가져오면 그 기간에 예전에 나이스에서 가져온 일정만 새것으로 바뀝니다. 직접 추가한 일정은 그대로입니다.
+4. **시간표 → 나이스에서 가져오기**: 학년·반과 가져올 주를 고르고 **불러오기**하면 그 주 시간표가 편집 화면에 채워집니다.
+   교시 시간·교실은 기존 값이 유지되니 확인하고 **저장**하세요 (나이스 시간표는 학교가 입력한 만큼만 나옵니다).
+
 ## 학생 계정 삭제 (교사)
 
 **학생 명단**에서 학생 줄의 **삭제**를 누르거나, 여러 명을 체크한 뒤 **선택한 학생 삭제**를 누릅니다.
@@ -284,7 +299,9 @@ seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이
   rows, cols, cells[ null | {blocked:true} | {uid,name,studentId} ], locked[], published, teacherUid, updatedAt
 
 events/{id}          // 학급 달력 일정
-  classId, title, type ('시험'|'수행평가'|'행사'|'과제'|'기타'), date, endDate, note, teacherUid, createdAt
+  classId, title, type ('시험'|'수행평가'|'행사'|'과제'|'기타'), date, endDate, note, source ('neis'|없음), teacherUid, createdAt
+settings/school      // 나이스 연동 (교사만 읽고 씀)
+  atptCode, schoolCode, schoolName, kind, region, apiKey, updatedAt
 timetables/{classId} // 시간표
   days(5|6), periods(1~10), times['09:00-09:45', …], cells[ {s: 과목, r: 교실} | null ] (요일 먼저), teacherUid, updatedAt
 
@@ -332,6 +349,8 @@ src/
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
   pages/AttendancePage.jsx, SeatingPage.jsx
   schedule.js                 달력·시간표 데이터와 날짜 계산
+  neis.js                     나이스 API (학교 검색, 학사일정, 시간표) + settings/school
+  pages/SchoolSettingsPage.jsx 학교 설정 (나이스 키·학교)
   pages/CalendarPage.jsx, TimetablePage.jsx (홈의 '오늘 시간표·다가오는 일정' 포함)
   pages/Notices*.jsx, Poll*.jsx, CounselPage.jsx
   pages/ChangePasswordPage.jsx  비밀번호 변경 (첫 로그인 시 강제)

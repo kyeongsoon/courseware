@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, ChevronRight, Clock, Pencil, Save, X } from 'lucide-react';
+import { CalendarDays, ChevronRight, Clock, Download, Pencil, Save, X } from 'lucide-react';
+import { NeisError, fetchTimetable, mondayOf, parseGradeClass, useSchoolSettings } from '../neis';
+import { dateInt, fromInput, toInput } from '../attendance';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
 import ClassGate from '../components/ClassGate';
@@ -107,21 +109,80 @@ function TableEdit({ initial, onSave, onCancel }) {
   );
 }
 
+function NeisTimetable({ base, onLoaded, onClose }) {
+  const { className } = useCurrentClass();
+  const settings = useSchoolSettings();
+  const parsed = parseGradeClass(className);
+  const [grade, setGrade] = useState(parsed.grade || 1);
+  const [classNo, setClassNo] = useState(parsed.classNo || 1);
+  const [day, setDay] = useState(dateInt());
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  if (settings === undefined) return <p className="muted">불러오는 중…</p>;
+  if (!settings) {
+    return <p className="muted">먼저 <Link to="/teacher/school">학교 설정</Link>에서 우리 학교와 나이스 키를 저장해 주세요.</p>;
+  }
+  const onFetch = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const got = await fetchTimetable(settings, { grade, classNo, monday: mondayOf(day) });
+      if (!got) return setErr('그 주에는 나이스 시간표가 없어요. 다른 주(학기 중 평일)를 골라 보세요.');
+      // 교시별 시간은 지금 시간표 것을 그대로 쓰고, 과목만 나이스 것으로
+      const merged = resizeTimetable(base ?? emptyTimetable(got.days, got.periods), got.days, got.periods);
+      onLoaded({ ...merged, cells: got.cells }, got.limited);
+    } catch (e) {
+      setErr(e instanceof NeisError ? e.message : `실패: ${e.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="neis-box">
+      <div className="row">
+        <b>나이스에서 가져오기</b><span className="muted small">{settings.schoolName}</span>
+        <span className="live-spacer" /><button className="icon-btn" onClick={onClose} title="닫기"><X size={18} /></button>
+      </div>
+      <div className="row">
+        <label className="inline-label small">학년 <input type="number" min={1} max={6} value={grade} onChange={(e) => setGrade(+e.target.value || 1)} aria-label="학년" /></label>
+        <label className="inline-label small">반 <input type="number" min={1} max={30} value={classNo} onChange={(e) => setClassNo(+e.target.value || 1)} aria-label="반" /></label>
+        <label className="inline-label small">이 날짜가 있는 주 <input type="date" value={toInput(day)} onChange={(e) => e.target.value && setDay(fromInput(e.target.value))} aria-label="가져올 주" /></label>
+        <button className="btn small primary" onClick={onFetch} disabled={busy}><Download size={16} /> {busy ? '가져오는 중…' : '불러오기'}</button>
+      </div>
+      <p className="muted small">불러온 과목이 아래 편집 칸에 채워져요. 확인하고 저장하세요. (교시별 시간은 그대로 둬요)</p>
+      {err && <p className="error">{err}</p>}
+    </div>
+  );
+}
+
 function Timetable() {
   const { user, isTeacher } = useAuth();
   const { classId } = useCurrentClass();
   const tt = useTimetable(classId);
   const [editing, setEditing] = useState(false);
+  const [neisOpen, setNeisOpen] = useState(false);
+  const [draft, setDraft] = useState(null); // 나이스에서 불러온 편집본
+  const [note, setNote] = useState('');
   if (tt === undefined) return <div className="muted">불러오는 중…</div>;
   return (
     <section className="panel">
       <div className="panel-head">
         <h2><Clock size={18} className="h-icon" /> 시간표</h2>
-        {isTeacher && !editing && <button className="btn small" onClick={() => setEditing(true)}><Pencil size={16} /> {tt ? '고치기' : '시간표 만들기'}</button>}
+        {isTeacher && !editing && (
+          <div className="row">
+            <button className="btn small" onClick={() => setNeisOpen(true)}><Download size={16} /> 나이스에서 가져오기</button>
+            <button className="btn small" onClick={() => setEditing(true)}><Pencil size={16} /> {tt ? '고치기' : '시간표 만들기'}</button>
+          </div>
+        )}
       </div>
+      {isTeacher && neisOpen && !editing && (
+        <NeisTimetable base={tt} onClose={() => setNeisOpen(false)}
+          onLoaded={(next, limited) => { setDraft(next); setNote(limited ? 'API 키가 없어 일부 칸만 받아졌어요.' : '나이스에서 불러왔어요. 확인하고 저장하세요.'); setNeisOpen(false); setEditing(true); }} />
+      )}
+      {editing && note && <p className="info">{note}</p>}
       {editing ? (
-        <TableEdit initial={tt ?? emptyTimetable()} onCancel={() => setEditing(false)}
-          onSave={async (next) => { await saveTimetable(classId, next, user.uid); setEditing(false); }} />
+        <TableEdit key={draft ? 'neis' : 'plain'} initial={draft ?? tt ?? emptyTimetable()} onCancel={() => { setEditing(false); setDraft(null); setNote(''); }}
+          onSave={async (next) => { await saveTimetable(classId, next, user.uid); setEditing(false); setDraft(null); setNote(''); }} />
       ) : tt ? <TableView tt={tt} /> : (
         <p className="muted">{isTeacher ? '아직 시간표가 없어요. "시간표 만들기"를 눌러 입력하세요.' : '아직 시간표가 없어요.'}</p>
       )}

@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { NeisError, fetchSchedule, importSchedule, parseGradeClass, schoolYearRange, useSchoolSettings } from '../neis';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
 import ClassGate from '../components/ClassGate';
@@ -73,7 +75,7 @@ function EventDetail({ ev, onClose }) {
         <h2><span className={`ev-dot ${typeClass(ev.type)}`} /> {ev.title}</h2>
         <button className="icon-btn" onClick={onClose} title="닫기"><X size={18} /></button>
       </div>
-      <p className="muted">{ev.type} · {shortLabel(ev.date)}{ev.endDate > ev.date ? ` ~ ${shortLabel(ev.endDate)}` : ''} · {dday(ev.date)}</p>
+      <p className="muted">{ev.source === 'neis' && <span className="tag info-tag">나이스</span>} {ev.type} · {shortLabel(ev.date)}{ev.endDate > ev.date ? ` ~ ${shortLabel(ev.endDate)}` : ''} · {dday(ev.date)}</p>
       {ev.note && <p className="pre">{ev.note}</p>}
     </div>
   );
@@ -93,6 +95,82 @@ export function UpcomingList({ events, days = 14, limit = 8 }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function NeisSchedulePanel({ onClose }) {
+  const { user } = useAuth();
+  const { classId, className } = useCurrentClass();
+  const settings = useSchoolSettings();
+  const range0 = schoolYearRange(dateInt());
+  const [from, setFrom] = useState(range0.from);
+  const [to, setTo] = useState(range0.to);
+  const [skipSat, setSkipSat] = useState(true);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const { grade } = parseGradeClass(className);
+
+  if (settings === undefined) return <p className="muted">불러오는 중…</p>;
+  if (!settings) {
+    return (
+      <div className="stack ev-form">
+        <div className="panel-head"><h2>나이스 학사일정</h2><button className="icon-btn" onClick={onClose} title="닫기"><X size={18} /></button></div>
+        <p className="muted">먼저 우리 학교와 나이스 키를 설정해 주세요.</p>
+        <Link className="btn primary" to="/teacher/school">학교 설정으로 가기</Link>
+      </div>
+    );
+  }
+  const run = async (fn) => {
+    setBusy(true);
+    setErr('');
+    setMsg('');
+    try {
+      await fn();
+    } catch (e) {
+      setErr(e instanceof NeisError ? e.message : `실패: ${e.code ?? e.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const onFetch = () => run(async () => setPreview(await fetchSchedule(settings, { from, to, grade, skipSaturday: skipSat })));
+  const onImport = () => run(async () => {
+    const r = await importSchedule(classId, preview.events, { from, to }, user.uid);
+    setMsg(`${r.added}개를 넣었어요.${r.removed ? ` (예전에 가져온 ${r.removed}개는 새것으로 바꿈)` : ''}`);
+    setPreview(null);
+  });
+
+  return (
+    <div className="stack ev-form">
+      <div className="panel-head"><h2>나이스 학사일정</h2><button className="icon-btn" onClick={onClose} title="닫기"><X size={18} /></button></div>
+      <p className="muted small">{settings.schoolName} · {className}{grade ? ` (${grade}학년 일정만)` : ''}</p>
+      <div className="row">
+        <label className="grow">부터<input type="date" value={toInput(from)} onChange={(e) => e.target.value && setFrom(fromInput(e.target.value))} /></label>
+        <label className="grow">까지<input type="date" value={toInput(to)} onChange={(e) => e.target.value && setTo(fromInput(e.target.value))} /></label>
+      </div>
+      <label className="check-line small"><input type="checkbox" checked={skipSat} onChange={(e) => setSkipSat(e.target.checked)} /> 토요휴업일 빼기</label>
+      {!preview ? (
+        <div><button className="btn primary" onClick={onFetch} disabled={busy}><Download size={16} /> {busy ? '가져오는 중…' : '나이스에서 불러오기'}</button></div>
+      ) : (
+        <>
+          <p className="info">{preview.events.length}개 일정을 찾았어요.{preview.limited ? ' (API 키가 없어 일부만 받아졌어요)' : ''}</p>
+          <ul className="up-list neis-preview">
+            {preview.events.slice(0, 30).map((e, i) => (
+              <li key={i}><span className={`ev-dot ${typeClass(e.type)}`} /><span className="grow">{e.title}</span><span className="muted small">{shortLabel(e.date)}{e.endDate > e.date ? `~${shortLabel(e.endDate)}` : ''}</span></li>
+            ))}
+            {preview.events.length > 30 && <li className="muted small">…외 {preview.events.length - 30}개</li>}
+          </ul>
+          <p className="muted small">넣으면 이 기간에 예전에 나이스에서 가져온 일정은 새것으로 바뀌어요. 직접 만든 일정은 그대로예요.</p>
+          <div className="row">
+            <button className="btn primary" onClick={onImport} disabled={busy || !preview.events.length}>{busy ? '넣는 중…' : `달력에 ${preview.events.length}개 넣기`}</button>
+            <button className="btn" onClick={() => setPreview(null)}>다시 고르기</button>
+          </div>
+        </>
+      )}
+      {err && <p className="error">{err}</p>}
+      {msg && <p className="info">{msg}</p>}
+    </div>
   );
 }
 
@@ -120,7 +198,12 @@ function Calendar() {
             <button className="icon-btn" onClick={() => move(1)} title="다음 달"><ChevronRight size={20} /></button>
             <button className="btn small" onClick={() => setYm(parts(today).slice(0, 2))}>오늘</button>
           </div>
-          {isTeacher && <button className="btn primary" onClick={() => setOpen({ mode: 'new', ev: { date: today } })}><Plus size={18} /> 일정 추가</button>}
+          {isTeacher && (
+            <div className="row">
+              <button className="btn" onClick={() => setOpen({ mode: 'neis' })}><Download size={18} /> 나이스 학사일정</button>
+              <button className="btn primary" onClick={() => setOpen({ mode: 'new', ev: { date: today } })}><Plus size={18} /> 일정 추가</button>
+            </div>
+          )}
         </div>
         <div className="cal-legend">{EVENT_TYPES.map((t) => <span key={t}><span className={`ev-dot ${typeClass(t)}`} /> {t}</span>)}</div>
         <div className="cal-grid">
@@ -146,7 +229,7 @@ function Calendar() {
       <div className="cal-side">
         {open && (
           <section className="panel">
-            {open.mode === 'view' ? <EventDetail ev={open.ev} onClose={() => setOpen(null)} /> : (
+            {open.mode === 'neis' ? <NeisSchedulePanel onClose={() => setOpen(null)} /> : open.mode === 'view' ? <EventDetail ev={open.ev} onClose={() => setOpen(null)} /> : (
               <EventForm key={open.ev.id ?? `new-${open.ev.date}`} initial={open.ev} onClose={() => setOpen(null)} />
             )}
           </section>
