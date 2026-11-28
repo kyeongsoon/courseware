@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarCheck, Check, Download, UserX } from 'lucide-react';
+import { CalendarCheck, Check, Download, QrCode, UserX } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
 import ClassGate from '../components/ClassGate';
 import { useStudents } from '../useStudents';
+import CheckInQr from '../components/CheckInQr';
+import QrScanner from '../components/QrScanner';
+import { setCheckInOpen } from '../checkinCode';
 import {
   REASONS, STATUSES, checkIn, clearRecord, dateInt, dateLabel, downloadMonthCsv, fromInput, isAfter, kstTime, monthOf,
   setDeadline, setStatus, toInput, useClassAttendance, useMyAttendance,
@@ -12,12 +15,25 @@ import {
 // ── 학생: 오늘 체크 카드 (홈에도 씀) ──
 export function MyCheckIn({ compact = false }) {
   const { user, profile } = useAuth();
-  const { classId } = useCurrentClass();
+  const { classId, classes } = useCurrentClass();
+  const open = classes.find((c) => c.id === classId)?.checkInOpen === true; // 코드 없이 출석 허용
   const today = dateInt();
   const records = useMyAttendance(user?.uid, monthOf(today));
   const mine = records.find((r) => r.date === today);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [scan, setScan] = useState(false);
+
+  const onCode = async (code) => {
+    try {
+      await checkIn(classId, user.uid, profile, code);
+      setScan(false);
+    } catch (e) {
+      throw new Error(e.code === 'permission-denied'
+        ? '코드가 맞지 않거나 시간이 지났어요. 교실 화면의 지금 QR로 다시 해 보세요.'
+        : `실패: ${e.code ?? e.message}`);
+    }
+  };
 
   const onCheck = async () => {
     setBusy(true);
@@ -44,8 +60,14 @@ export function MyCheckIn({ compact = false }) {
           {mine.by === 'teacher' && !mine.checkedAt && <span className="muted">선생님이 기록했어요</span>}
         </p>
       ) : (
-        <button className="btn primary big" onClick={onCheck} disabled={busy}><CalendarCheck size={20} /> {busy ? '체크 중…' : '출석 체크'}</button>
+        <div className="row">
+          {open
+            ? <button className="btn primary big" onClick={onCheck} disabled={busy}><CalendarCheck size={20} /> {busy ? '체크 중…' : '출석 체크'}</button>
+            : <button className="btn primary big" onClick={() => setScan(true)}><QrCode size={20} /> QR로 출석</button>}
+          {!open && <span className="muted small">교실 화면의 QR 코드를 찍어야 출석돼요.</span>}
+        </div>
       )}
+      {scan && <QrScanner classId={classId} onCode={onCode} onClose={() => setScan(false)} />}
       {err && <p className="error">{err}</p>}
       {!compact && records.length > 0 && (
         <ul className="my-att">
@@ -116,8 +138,15 @@ function StudentRow({ s, rec, date, classId, deadline }) {
   );
 }
 
+// 교사: 출석 QR 화면 (오늘 기록을 같이 보여 줌)
+function QrOverlay({ classId, className, roster, onClose }) {
+  const { user } = useAuth();
+  const records = useClassAttendance(classId, { date: dateInt() });
+  return <CheckInQr classId={classId} className={className} teacherUid={user.uid} roster={roster} records={records} onClose={onClose} />;
+}
+
 function TeacherAttendance() {
-  const { classId, classes } = useCurrentClass();
+  const { classId, className, classes } = useCurrentClass();
   const cls = classes.find((c) => c.id === classId);
   const { students } = useStudents();
   const roster = useMemo(() => students.filter((s) => s.classId === classId), [students, classId]);
@@ -130,6 +159,13 @@ function TeacherAttendance() {
   // 반을 바꾸거나 반 정보가 늦게 오면 그 반의 기준 시각으로
   useEffect(() => setDl(cls?.checkInDeadline ?? ''), [classId, cls?.checkInDeadline]);
   const missing = roster.filter((s) => !byUid[s.uid]);
+  const [qr, setQr] = useState(false);
+  const [openNoCode, setOpenNoCode] = useState(cls?.checkInOpen === true);
+  useEffect(() => setOpenNoCode(cls?.checkInOpen === true), [classId, cls?.checkInOpen]);
+  const toggleOpen = (v) => {
+    setOpenNoCode(v);
+    setCheckInOpen(classId, v).catch(() => setOpenNoCode(!v));
+  };
 
   const markAbsent = async () => {
     if (!confirm(`체크하지 않은 ${missing.length}명을 결석으로 기록할까요?`)) return;
@@ -138,6 +174,7 @@ function TeacherAttendance() {
 
   return (
     <section className="panel">
+      {qr && <QrOverlay classId={classId} className={className} roster={roster} onClose={() => setQr(false)} />}
       <div className="panel-head">
         <div className="tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'day'} className={`tab ${tab === 'day' ? 'on' : ''}`} onClick={() => setTab('day')}>하루</button>
@@ -146,6 +183,10 @@ function TeacherAttendance() {
         {tab === 'day' ? (
           <div className="row">
             <input type="date" value={toInput(date)} onChange={(e) => e.target.value && setDate(fromInput(e.target.value))} aria-label="날짜" />
+            <button className="btn small primary" onClick={() => setQr(true)}><QrCode size={16} /> 출석 QR 띄우기</button>
+            <label className="check-line small" title="선생님이 QR을 못 띄우는 날 (출장 등)">
+              <input type="checkbox" checked={openNoCode} onChange={(e) => toggleOpen(e.target.checked)} /> QR 없이 출석 허용
+            </label>
             <label className="inline-label small">
               늦음 기준
               <input type="time" value={deadline} onChange={(e) => setDl(e.target.value)} onBlur={() => deadline !== (cls?.checkInDeadline ?? '') && setDeadline(classId, deadline)} aria-label="늦음 기준 시각" />

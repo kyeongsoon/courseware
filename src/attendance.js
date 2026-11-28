@@ -57,13 +57,13 @@ export function useMyAttendance(uid, month) {
   return records;
 }
 
-// 학생: 오늘 출석 체크
-export function checkIn(classId, uid, profile) {
+// 학생: 오늘 출석 체크 (code: 교실 화면의 6자리 출석 코드, 코드 없이 허용된 반이면 '')
+export function checkIn(classId, uid, profile, code = '') {
   const date = dateInt();
   return setDoc(doc(db, 'attendance', docId(classId, date, uid)), {
     classId, uid, date, month: monthOf(date),
     name: profile.displayName ?? '', studentId: profile.studentId ?? '',
-    status: 'present', reason: '', note: '', by: 'self', checkedAt: serverTimestamp(),
+    status: 'present', reason: '', note: '', by: 'self', code, checkedAt: serverTimestamp(),
   });
 }
 

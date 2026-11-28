@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Armchair, Lock, Maximize, Minimize, RotateCcw, Save, Shuffle, SortAsc } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Armchair, Lock, Maximize, Minimize, Printer, RotateCcw, Save, Shuffle, SortAsc } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
 import ClassGate from '../components/ClassGate';
 import { useStudents } from '../useStudents';
+import { dateLabel, dateInt } from '../attendance';
 import { arrange, emptyLayout, isSeat, isStudent, person, resize, saveSeating, swap, useSeating } from '../seating';
 
 /**
@@ -37,6 +39,20 @@ function Grid({ layout, view, selected, myUid, onCell, editable }) {
   );
 }
 
+// 인쇄용 자리표: body 바로 아래에 그려 두고, 인쇄할 때만 이것만 보이게 (styles.css @media print)
+function PrintSheet({ layout, view, className }) {
+  return createPortal(
+    <div className="print-sheet">
+      <div className="print-head">
+        <h1>{className} 자리 배치표</h1>
+        <span>{dateLabel(dateInt())} · {view === 'teacher' ? '교사 시점 (교탁이 아래)' : '학생 시점 (교탁이 위)'}</span>
+      </div>
+      <Grid layout={{ ...layout, locked: [] }} view={view} />
+    </div>,
+    document.body,
+  );
+}
+
 function useFullscreen(ref) {
   const [full, setFull] = useState(false);
   useEffect(() => {
@@ -50,7 +66,7 @@ function useFullscreen(ref) {
 
 function TeacherSeating() {
   const { user } = useAuth();
-  const { classId } = useCurrentClass();
+  const { classId, className } = useCurrentClass();
   const saved = useSeating(classId);
   const { students } = useStudents();
   const roster = useMemo(() => students.filter((s) => s.classId === classId), [students, classId]);
@@ -165,10 +181,14 @@ function TeacherSeating() {
       <section className={`panel seat-panel ${full ? 'is-full' : ''}`} ref={box}>
         <div className="panel-head">
           <h2><Armchair size={18} className="h-icon" /> 자리표 {layout.published ? <span className="tag done">공개 중</span> : <span className="tag muted-tag">비공개</span>}</h2>
-          <button className="icon-btn" onClick={toggleFull} title={full ? '전체 화면 끝내기' : '전체 화면 (프로젝터)'}>{full ? <Minimize size={20} /> : <Maximize size={20} />}</button>
+          <div className="row">
+            <button className="btn small" onClick={() => window.print()} title="지금 보는 방향(교사/학생 시점)으로 A4 가로 한 장에 인쇄"><Printer size={16} /> 인쇄</button>
+            <button className="icon-btn" onClick={toggleFull} title={full ? '전체 화면 끝내기' : '전체 화면 (프로젝터)'}>{full ? <Minimize size={20} /> : <Maximize size={20} />}</button>
+          </div>
         </div>
         <Grid layout={layout} view={view} selected={typeof selected === 'number' ? selected : null} onCell={onCell} editable />
       </section>
+      <PrintSheet layout={layout} view={view} className={className} />
 
       {(unseated.length > 0 || ghosts > 0) && (
         <section className="panel">

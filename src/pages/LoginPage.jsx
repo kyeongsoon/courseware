@@ -6,7 +6,7 @@ import { toKoreanMessage } from '../authErrors';
 export default function LoginPage() {
   const { user, loginWithGoogle, loginWithId } = useAuth();
   const location = useLocation();
-  const from = location.state?.from?.pathname ?? '/';
+  const from = location.state?.from ? `${location.state.from.pathname}${location.state.from.search ?? ''}` : '/';
 
   const [loginId, setLoginId] = useState('');
   const [password, setPassword] = useState('');

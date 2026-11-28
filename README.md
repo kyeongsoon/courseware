@@ -160,7 +160,12 @@ firebase deploy --only firestore:rules
 ## 학급운영 · 생활
 
 - **출결·조회 체크**
-  - 학생: 아침에 홈에서 **출석 체크**를 누르면 체크 시각과 함께 '출석'으로 기록됩니다. 오늘 날짜, 자기 반, 자기 것만, 처음 한 번만 쓸 수 있습니다(지각·결석 등은 학생이 못 씀).
+  - **QR 출석** (교실에 없는 학생이 출석 누르기 방지)
+    - 교사: **출결 → 출석 QR 띄우기**를 누르면 교실 TV·프로젝터에 큰 QR과 6자리 코드가 뜹니다. **20초마다 바뀌고**, 출석한 인원과 방금 출석한 학생이 보입니다.
+    - 학생: 홈의 **QR로 출석** → 카메라로 QR을 비추거나 코드 6자리 입력. 휴대폰 기본 카메라로 QR을 찍어도 사이트가 열리며 바로 출석됩니다(로그인 안 돼 있으면 로그인 후 자동으로).
+    - 코드는 만든 지 **45초** 동안만 통하고(방금 바뀐 직전 코드도 잠깐 인정), QR 화면을 닫으면 바로 무효가 됩니다. 확인은 Firestore 보안 규칙이 하고 학생은 코드를 읽을 수 없어 화면 조작으로 뚫을 수 없습니다.
+    - 출장 등으로 QR을 못 띄우는 날은 **QR 없이 출석 허용**을 켜면 예전처럼 **출석 체크** 버튼으로 출석합니다.
+  - 학생은 오늘 날짜, 자기 반, 자기 것만, 처음 한 번만 '출석'으로 쓸 수 있습니다(지각·결석 등은 학생이 못 씀).
   - 교사(메뉴 **출결**): 날짜별로 반 전체를 보고 **미체크** 학생을 확인합니다. 출석·지각·조퇴·결석을 눌러 바꾸고, 사유(질병·미인정·기타·출석인정)와 메모를 남깁니다.
     **늦음 기준** 시각을 정하면 그 뒤에 체크한 학생이 표시되고, **미체크 모두 결석**으로 한 번에 기록할 수 있습니다. 교사가 고쳐도 학생이 체크한 시각은 남습니다.
   - **월별 요약**: 학생별 출석·지각·조퇴·결석 일수와 **CSV 다운로드**(날짜별 기록 포함) — 나이스 입력할 때 참고하세요.
@@ -169,6 +174,7 @@ firebase deploy --only firestore:rules
   - 줄·칸(최대 12×12)을 정하고 **무작위 배치** 또는 **학번순**으로 앉힙니다.
   - 누르는 방식: **자리 바꾸기**(두 자리를 눌러 교환, '아직 자리가 없는 학생'을 눌러 앉히기), **자리 없음 칸**(기둥·통로), **고정**(무작위 배치 때 안 움직임).
   - **교사 시점**(교탁이 아래)·**학생 시점**(교탁이 위)으로 볼 수 있고, 전체 화면으로 프로젝터에 띄울 수 있습니다.
+  - **인쇄**: 지금 보는 방향 그대로 A4 가로 한 장에 반 이름·날짜와 함께 인쇄됩니다 (교실 게시용은 학생 시점, 교탁용은 교사 시점).
   - **저장**한 뒤 **학생에게 공개**하면 학생 화면에서 자기 자리가 강조됩니다. 공개 전에는 학생이 볼 수 없습니다(열어 둔 학생 화면도 공개 후 10초 안에 보임).
 
 ## 학급운영 · 일정
@@ -311,8 +317,11 @@ counsel/{id}         // 상담 신청 (본인과 교사만)
 
 attendance/{반_날짜_학생}   // 출결 (학생은 오늘 '출석'만 처음 한 번)
   classId, uid, date(20261128), month(202611), name, studentId,
-  status ('present'|'late'|'early'|'absent'), reason, note, by ('self'|'teacher'), checkedAt, updatedAt
+  status ('present'|'late'|'early'|'absent'), reason, note, by ('self'|'teacher'), code(학생이 낸 출석 코드), checkedAt, updatedAt
 classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
+classes/{id}.checkInOpen       // true 면 QR 없이 출석 허용
+checkinCodes/{classId} // 출석 QR 코드 (교사만 읽고 씀, 20초마다 바뀜)
+  code, issuedAt, prevCode, prevIssuedAt, teacherUid
 seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이 읽음)
   rows, cols, cells[ null | {blocked:true} | {uid,name,studentId} ], locked[], published, teacherUid, updatedAt
 
@@ -367,6 +376,8 @@ src/
   components/ClassFeed.jsx    홈의 '우리 반 소식' (알림장·설문·상담)
   notices.js, polls.js, counsel.js   알림장·설문·상담 데이터
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
+  checkinCode.js              출석 QR 코드 만들기·바꾸기, components/CheckInQr.jsx(교사 화면), QrScanner.jsx(학생 인증 창)
+  pages/CheckInLinkPage.jsx   휴대폰 카메라로 QR을 찍으면 열리는 /checkin 주소
   pages/AttendancePage.jsx, SeatingPage.jsx
   schedule.js                 달력·시간표 데이터와 날짜 계산
   neis.js                     나이스 연동 Firestore 쪽 (settings/school, 일정 가져오기)
