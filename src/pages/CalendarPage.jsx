@@ -137,7 +137,9 @@ function NeisSchedulePanel({ onClose }) {
   const onFetch = () => run(async () => setPreview(await fetchSchedule(settings, { from, to, grade, skipSaturday: skipSat })));
   const onImport = () => run(async () => {
     const r = await importSchedule(classId, preview.events, { from, to }, user.uid);
-    setMsg(`${r.added}개를 넣었어요.${r.removed ? ` (예전에 가져온 ${r.removed}개는 새것으로 바꿈)` : ''}`);
+    setMsg(r.added || r.removed
+      ? `반영했어요: 새로 ${r.added}개${r.removed ? `, 바뀌거나 없어진 ${r.removed}개 지움` : ''}${r.kept ? `, 그대로 ${r.kept}개` : ''}.`
+      : `달라진 게 없어요. (이미 ${r.kept}개가 들어 있어요)`);
     setPreview(null);
   });
 

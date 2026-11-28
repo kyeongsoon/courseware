@@ -10,19 +10,10 @@ import { dateInt } from './attendance';
 export const EVENT_TYPES = ['시험', '수행평가', '행사', '과제', '기타'];
 export const DAY_NAMES = ['월', '화', '수', '목', '금', '토'];
 
-// ── 날짜 계산 (날짜 숫자 20261128 ↔ 달력) ──
-export const ymd = (y, m, d) => y * 10000 + m * 100 + d;
-export const parts = (n) => [Math.floor(n / 10000), Math.floor(n / 100) % 100, n % 100];
-const utc = (n) => {
-  const [y, m, d] = parts(n);
-  return Date.UTC(y, m - 1, d);
-};
-export const addDays = (n, k) => {
-  const t = new Date(utc(n) + k * 86400000);
-  return ymd(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate());
-};
-export const diffDays = (a, b) => Math.round((utc(b) - utc(a)) / 86400000);
-export const weekday = (n) => new Date(utc(n)).getUTCDay(); // 0=일
+// 날짜 계산·시간표 칸 계산은 scheduleCore.js (자동 갱신 스크립트와 같이 씀)
+export { ymd, parts, addDays, diffDays, weekday, kstToday, DEFAULT_TIMES, emptyTimetable, cellAt, resizeTimetable } from './scheduleCore';
+import { ymd, parts, addDays, diffDays, weekday, cellAt } from './scheduleCore';
+
 export const shortLabel = (n) => {
   const [, m, d] = parts(n);
   return `${m}/${d}(${'일월화수목금토'[weekday(n)]})`;
@@ -76,11 +67,6 @@ export const dday = (date, today = dateInt()) => {
 };
 
 // ── 시간표 ──
-export const DEFAULT_TIMES = ['08:40-09:25', '09:35-10:20', '10:30-11:15', '11:25-12:10', '13:00-13:45', '13:55-14:40', '14:50-15:35', '15:45-16:30', '16:40-17:25', '17:35-18:20'];
-export const emptyTimetable = (days = 5, periods = 7) => ({
-  days, periods, times: DEFAULT_TIMES.slice(0, periods), cells: Array(days * periods).fill(null),
-});
-
 export function useTimetable(classId) {
   const [tt, setTt] = useState(undefined);
   useEffect(() => {
@@ -92,18 +78,6 @@ export function useTimetable(classId) {
 
 export const saveTimetable = (classId, tt, teacherUid) =>
   setDoc(doc(db, 'timetables', classId), { ...tt, teacherUid, updatedAt: serverTimestamp() });
-
-export const cellAt = (tt, day, period) => tt.cells[day * tt.periods + period];
-
-// 요일·교시 수 바꾸기 (남는 칸은 유지)
-export function resizeTimetable(tt, days, periods) {
-  const cells = Array(days * periods).fill(null);
-  for (let d = 0; d < Math.min(days, tt.days); d++) {
-    for (let p = 0; p < Math.min(periods, tt.periods); p++) cells[d * periods + p] = cellAt(tt, d, p);
-  }
-  const times = Array.from({ length: periods }, (_, i) => tt.times[i] ?? DEFAULT_TIMES[i] ?? '');
-  return { ...tt, days, periods, cells, times };
-}
 
 // 지금(한국 시각) 요일 번호(월=0)와 교시 번호 (수업 시간 밖이면 -1)
 export function nowSlot(tt, now = new Date()) {

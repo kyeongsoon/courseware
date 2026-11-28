@@ -536,3 +536,11 @@ input[type='date'], input[type='month'], input[type='time'], input[type='number'
 .school-list li + li { border-top: none; }
 .neis-box { border: 1px dashed var(--accent); background: var(--primary-soft); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
 .neis-preview { max-height: 280px; overflow-y: auto; }
+
+.check-line { gap: 8px; align-items: flex-start; font-weight: 500; }
+.check-line input { width: auto; margin-top: 3px; }
+.check-line svg { vertical-align: -3px; }
+.sync-status { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); }
+.sync-status.bad { background: #fdecec; }
+.sync-status ul { margin: 6px 0 0; padding-left: 18px; }
+.sync-status p { margin: 4px 0 0; }

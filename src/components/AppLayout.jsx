@@ -159,8 +159,8 @@ export default function AppLayout() {
 
       {!bare && <aside className={`sidebar ${mobileOpen ? 'open' : ''}`} aria-label="주 메뉴">
         <div className="brand">
-          <div className="logo">정</div>
-          <span className="brand-name">정보 코스웨어</span>
+          <div className="logo" aria-hidden="true">👋</div>
+          <span className="brand-name">Hello, Class!</span>
           <button className="icon-btn collapse-btn" onClick={toggleCollapsed} title={collapsed ? '메뉴 펼치기' : '메뉴 접기'}>
             {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
           </button>

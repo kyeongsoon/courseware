@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, ChevronRight, Clock, Download, Pencil, Save, X } from 'lucide-react';
-import { NeisError, fetchTimetable, mondayOf, parseGradeClass, useSchoolSettings } from '../neis';
+import { NeisError, fetchTimetable, mergeNeisTimetable, mondayOf, parseGradeClass, useSchoolSettings } from '../neis';
 import { dateInt, fromInput, toInput } from '../attendance';
 import { useAuth } from '../contexts/AuthContext';
 import { useCurrentClass } from '../contexts/ClassContext';
@@ -128,9 +128,8 @@ function NeisTimetable({ base, onLoaded, onClose }) {
     try {
       const got = await fetchTimetable(settings, { grade, classNo, monday: mondayOf(day) });
       if (!got) return setErr('그 주에는 나이스 시간표가 없어요. 다른 주(학기 중 평일)를 골라 보세요.');
-      // 교시별 시간은 지금 시간표 것을 그대로 쓰고, 과목만 나이스 것으로
-      const merged = resizeTimetable(base ?? emptyTimetable(got.days, got.periods), got.days, got.periods);
-      onLoaded({ ...merged, cells: got.cells }, got.limited);
+      // 교시별 시간은 지금 시간표 것을 그대로 쓰고, 과목만 나이스 것으로 (과목이 같은 칸은 교실도 유지)
+      onLoaded(mergeNeisTimetable(base, got), got.limited);
     } catch (e) {
       setErr(e instanceof NeisError ? e.message : `실패: ${e.message}`);
     } finally {

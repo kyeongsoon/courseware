@@ -1,0 +1,53 @@
+# 매일 아침 나이스 학사일정·시간표를 모든 반에 자동 반영 (scripts/neis-sync.mjs)
+# - 한국 시각 06:45 에 시작 (GitHub 예약 실행은 몇 분 늦게 시작할 수 있어 7시 전에 끝나도록)
+# - Actions 탭 → "NEIS daily sync" → "Run workflow" 로 지금 바로 실행할 수도 있음
+# 필요한 것: FIREBASE_SERVICE_ACCOUNT 시크릿의 서비스 계정에 "Cloud Datastore 사용자" 역할 (README 참고)
+name: NEIS daily sync
+
+on:
+  schedule:
+    - cron: '45 21 * * *' # UTC 21:45 = 한국 06:45
+  workflow_dispatch:
+
+concurrency:
+  group: neis-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      FIREBASE_PROJECT: courseware-acba8
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: scripts/package-lock.json
+
+      - name: Install
+        working-directory: scripts
+        run: npm ci
+
+      - name: Write service account key
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT 시크릿이 없습니다."
+            exit 1
+          fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+
+      - name: Sync from NEIS
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/sa.json
+        run: node scripts/neis-sync.mjs
+
+      - name: Remove key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"

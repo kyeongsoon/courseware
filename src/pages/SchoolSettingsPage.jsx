@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ExternalLink, KeyRound, Search, School } from 'lucide-react';
-import { NeisError, saveSchoolSettings, searchSchools, useSchoolSettings } from '../neis';
+import { AlarmClock, ExternalLink, KeyRound, Search, School } from 'lucide-react';
+import { NeisError, saveSchoolSettings, searchSchools, useNeisSyncStatus, useSchoolSettings } from '../neis';
+import { formatDateTime } from '../util/dates';
 
 export default function SchoolSettingsPage() {
   const saved = useSchoolSettings();
@@ -11,10 +12,13 @@ export default function SchoolSettingsPage() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
+  const [autoSync, setAutoSync] = useState(true);
+  const sync = useNeisSyncStatus();
 
   useEffect(() => {
     if (saved) {
       setKey(saved.apiKey ?? '');
+      setAutoSync(saved.autoSync !== false);
       setPicked({ atptCode: saved.atptCode, schoolCode: saved.schoolCode, schoolName: saved.schoolName, kind: saved.kind, region: saved.region ?? '' });
     }
   }, [saved]);
@@ -41,7 +45,7 @@ export default function SchoolSettingsPage() {
     setBusy(true);
     setErr('');
     try {
-      await saveSchoolSettings({ ...picked, apiKey: key.trim() });
+      await saveSchoolSettings({ ...picked, apiKey: key.trim(), autoSync });
       setMsg('저장했어요. 이제 학급 달력과 시간표에서 나이스 자료를 가져올 수 있어요.');
     } catch (e2) {
       setErr(`저장 실패: ${e2.code ?? e2.message}`);
@@ -94,9 +98,29 @@ export default function SchoolSettingsPage() {
           선택한 학교: <b>{picked.schoolName}</b> ({picked.kind}{picked.region ? ` · ${picked.region}` : ''})
         </p>
       )}
+      <label className="row nowrap check-line">
+        <input type="checkbox" checked={autoSync} onChange={(e) => setAutoSync(e.target.checked)} />
+        <span><AlarmClock size={16} /> 매일 아침 7시에 나이스 학사일정·이번 주 시간표를 모든 반에 자동으로 반영</span>
+      </label>
+      <p className="muted small">
+        API 키가 있어야 동작해요. 학사일정은 나이스에서 가져온 일정만 바뀌고 직접 넣은 일정은 그대로예요.
+        시간표는 과목만 바뀌고 교시 시간은 그대로예요 (주말에는 다음 주 시간표). 반 이름이 "3학년 1반"처럼 되어 있어야 해요.
+      </p>
       {err && <p className="error">{err}</p>}
       {msg && <p className="info">{msg}</p>}
       <div><button className="btn primary" onClick={onSave} disabled={busy || !picked}>저장</button></div>
+
+      {sync && (
+        <div className={`sync-status ${sync.ok ? '' : 'bad'}`}>
+          <b>마지막 자동 갱신: {formatDateTime(sync.at)}</b> {sync.ok ? '· 성공' : '· 실패'}
+          {sync.message && <p className="small">{sync.message}</p>}
+          {sync.classes?.length > 0 && (
+            <ul className="small">
+              {sync.classes.map((c) => <li key={c.name}>{c.name}: {c.summary}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
     </section>
   );
 }
