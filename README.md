@@ -15,7 +15,7 @@
 | 로그인, 학생 아이디 만들기, 학생 명단, 비밀번호 변경 | 켜짐 |
 | 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
 | 학급운영 · 소통: 알림장(읽음 확인), 설문·투표, 상담 신청 | 켜짐 |
-| 학급운영 · 생활: 출결(QR)·자리 배치·교우 관계 | 켜짐 |
+| 학급운영 · 생활: 출결(QR)·자리 배치·역할·청소·교우 관계 | 켜짐 |
 | 학급운영 · 일정: 학급 달력, 시간표 | 켜짐 |
 | 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
 
@@ -177,6 +177,14 @@ firebase deploy --only firestore:rules
   - **인쇄**: 지금 보는 방향 그대로 A4 가로 한 장에 반 이름·날짜와 함께 인쇄됩니다 (교실 게시용은 학생 시점, 교탁용은 교사 시점).
   - **저장**한 뒤 **학생에게 공개**하면 학생 화면에서 자기 자리가 강조됩니다. 공개 전에는 학생이 볼 수 없습니다(열어 둔 학생 화면도 공개 후 10초 안에 보임).
 
+- **역할·청소** (메뉴 **역할·청소** / 학생은 **내 역할·청소**) — 1인 1역과 청소 당번을 같은 방식으로
+  - **역할(구역) 목록**: 이름·설명·**난이도**(가벼움 1 · 보통 2 · 힘듦 3)·**인원**. '추천 목록 불러오기'로 시작해 우리 반에 맞게 고칩니다.
+    할 일이 많은 역할은 인원을 늘리고 억지로 만든 역할은 지워도 됩니다 — 자리가 학생보다 적으면 남는 학생은 이번엔 쉬고 다음 배정에서 먼저 맡습니다.
+  - **공평하게 자동 배정**: 난이도 × 기간(주)을 '부담 점수'로 쌓아, 점수가 적은 학생부터 힘든 역할을 맡기고 지난번과 같은 역할은 피합니다. 자리마다 학생을 골라 맞바꿀 수 있고, 배정 뒤 최소·최대 부담 점수를 미리 봅니다. 1인 1역은 4주, 청소는 1주가 기본 기간입니다.
+  - **오늘 했어요**: 학생이 홈에서 누르면 교사 화면에 ✓와 '오늘 했어요 n / m명'이 보입니다(자기 역할·오늘·진행 중인 공개 배정만, 보안 규칙).
+  - **공평 점검**: 학생별 1인 1역·청소·합계 부담 점수(평균보다 많이 높으면 🔺, 낮으면 🔻), 힘든/가벼운 역할 횟수, 맡은 기간 평일 대비 '했어요' 비율.
+  - 시뮬레이션(28명·14역할·4주씩 6회): 자동 배정 후 부담 점수 차이 8점, 무작위 배정은 40점 안팎.
+
 - **교우 관계** (메뉴 **교우 관계** / 학생은 **친구 조사**)
   - **조사 관리**: 회차(예: 3월, 6월)를 시작하면 학생 홈에 응답 안내가 뜹니다. 기본 질문 3개(모둠 활동을 같이 하고 싶은 친구 / 고민이 있을 때 이야기하는 친구 / 도움을 받고 싶은 친구)에 질문마다 **3명까지** 고릅니다. 미응답 학생 확인, 마감·다시 열기, 삭제.
   - 학생 응답은 **교사만** 봅니다. 학생은 진행 중인 자기 반 조사에 자기 응답만 쓰고(마감 전까지 수정), 자기 자신·4명 이상은 고를 수 없습니다(보안 규칙).
@@ -331,6 +339,12 @@ attendance/{반_날짜_학생}   // 출결 (학생은 오늘 '출석'만 처음 
   status ('present'|'late'|'early'|'absent'), reason, note, by ('self'|'teacher'), code(학생이 낸 출석 코드), checkedAt, updatedAt
 classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
 classes/{id}.checkInOpen       // true 면 QR 없이 출석 허용
+dutyBoards/{반_kind}   // 1인 1역(role)·청소(clean) 목록 (교사가 쓰고 그 반 학생이 읽음)
+  classId, kind, tasks[{id, name, desc, level(1~3), count}], teacherUid, updatedAt
+dutyRounds/{id}      // 배정 회차 (공개한 것만 학생이 읽음)
+  classId, kind, from, to, assign{taskId:[uid…]}, tasks(그때 목록), names{uid:이름}, published, teacherUid, createdAt
+dutyChecks/{회차_날짜_학생}  // '오늘 했어요' (학생은 자기 것만)
+  roundId, classId, uid, taskId, date, checkedAt
 relSurveys/{id}      // 교우관계 조사 회차 (교사가 만들고 그 반 학생이 읽음)
   classId, title, questions[{id:'q1'|'q2'|'q3', text}], questionIds, maxPicks(3), roster[{uid,name,studentId}], conflictQ(갈등 질문), open, teacherUid, createdAt
 relResponses/{회차_학생}  // 응답 (학생은 자기 것만, 결과는 교사만)
@@ -395,6 +409,7 @@ src/
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
   checkinCode.js              출석 QR 코드 만들기·바꾸기, components/CheckInQr.jsx(교사 화면), QrScanner.jsx(학생 인증 창)
   pages/CheckInLinkPage.jsx   휴대폰 카메라로 QR을 찍으면 열리는 /checkin 주소
+  duties.js, pages/DutiesPage.jsx  1인 1역·청소 당번 (부담 점수, 공평 자동 배정, 오늘 했어요)
   relations.js                교우관계 조사·응답·관찰 기록과 분석 (서로 고름, 무리, 회차 비교)
   pages/RelationsPage.jsx, components/RelationGraph.jsx  관계도 (d3-force 배치)
   pages/AttendancePage.jsx, SeatingPage.jsx
