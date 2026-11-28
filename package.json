@@ -12,6 +12,7 @@
     "dev:emu:all": "VITE_USE_EMULATOR=true VITE_FEATURE_LESSONS=true VITE_ENABLE_PASSWORD_RESET=true VITE_FIREBASE_API_KEY=demo-key VITE_FIREBASE_AUTH_DOMAIN=localhost VITE_FIREBASE_PROJECT_ID=demo-courseware vite"
   },
   "dependencies": {
+    "d3-force": "^3.0.0",
     "firebase": "^12.4.0",
     "jsqr": "^1.4.0",
     "lucide-react": "^1.73.0",

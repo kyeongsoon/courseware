@@ -4,7 +4,7 @@ import { db, functions } from './firebase';
 
 /**
  * 교사가 학생 계정 삭제
- * 1) 학생 기록 지우기: 출결, 알림 읽음, 설문 응답, 상담, 자리표의 자리
+ * 1) 학생 기록 지우기: 출결, 알림 읽음, 설문 응답, 상담, 자리표의 자리, 교우관계 응답·관찰 기록
  * 2-a) 서버 기능(Cloud Functions, Blaze 요금제)을 켰으면: 로그인 계정과 users 문서까지 완전히 삭제
  * 2-b) 무료 요금제: users 문서를 '삭제됨'으로 바꾸고 반·이름을 지움 → 로그인해도 아무것도 못 함.
  *      로그인 계정은 남으므로 같은 학번을 다시 쓰려면 Firebase 콘솔 Authentication 에서 지워야 함
@@ -22,17 +22,26 @@ async function deleteAll(q) {
 
 // 여러 학생을 한 번에 지울 때 반복 조회를 줄이려고 공지·설문·자리표 목록은 한 번만 읽음
 async function loadShared() {
-  const [notices, polls, seating] = await Promise.all([
+  const [notices, polls, seating, surveys] = await Promise.all([
     getDocs(collection(db, 'notices')),
     getDocs(collection(db, 'polls')),
     getDocs(collection(db, 'seating')),
+    getDocs(collection(db, 'relSurveys')),
   ]);
-  return { notices: notices.docs, polls: polls.docs, seating: seating.docs };
+  return { notices: notices.docs, polls: polls.docs, seating: seating.docs, surveys: surveys.docs };
 }
 
 async function removeRecords(uid, shared) {
   await deleteAll(query(collection(db, 'attendance'), where('uid', '==', uid)));
   await deleteAll(query(collection(db, 'counsel'), where('studentUid', '==', uid)));
+  // 교우관계: 그 학생의 응답과 관찰 기록, 조사 명단에서 이름 빼기
+  await deleteAll(query(collection(db, 'relResponses'), where('uid', '==', uid)));
+  await deleteAll(query(collection(db, 'relNotes'), where('a', '==', uid)));
+  await deleteAll(query(collection(db, 'relNotes'), where('b', '==', uid)));
+  for (const s of shared.surveys) {
+    const roster = s.data().roster ?? [];
+    if (roster.some((r) => r.uid === uid)) await updateDoc(s.ref, { roster: roster.filter((r) => r.uid !== uid) });
+  }
   // 없는 문서를 지워도 오류가 아니므로 공지·설문마다 그 학생 문서를 지움
   await Promise.all([
     ...shared.notices.map((n) => deleteDoc(doc(db, 'notices', n.id, 'reads', uid))),

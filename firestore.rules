@@ -327,6 +327,48 @@ service cloud.firestore {
         && request.resource.data.published is bool;
     }
 
+    // ───── 교우관계 조사 ─────
+    // 조사 회차: 교사가 만들고 그 반 학생이 읽음 (질문, 친구를 고를 반 명단)
+    match /relSurveys/{surveyId} {
+      allow read: if isTeacher() || inClass(resource.data.classId);
+      allow create, update: if isTeacher()
+        && isStr(request.resource.data.classId, 1, 100)
+        && isStr(request.resource.data.title, 1, 40)
+        && request.resource.data.questionIds is list
+        && request.resource.data.questionIds.size() >= 1 && request.resource.data.questionIds.size() <= 3
+        && request.resource.data.questionIds.hasOnly(['q1', 'q2', 'q3'])
+        && request.resource.data.maxPicks is int && request.resource.data.maxPicks >= 1 && request.resource.data.maxPicks <= 5
+        && request.resource.data.roster is list && request.resource.data.roster.size() <= 60
+        && request.resource.data.open is bool;
+      allow delete: if isTeacher();
+    }
+    // 응답: 학생은 진행 중인 자기 반 조사에 자기 응답만 쓰고 읽음. 남의 응답·결과는 교사만
+    match /relResponses/{responseId} {
+      function picksOk(a, q, max) {
+        return !(q in a) || (a[q] is list && a[q].size() <= max && !(request.auth.uid in a[q]));
+      }
+      function validResponse() {
+        let d = request.resource.data;
+        let s = get(/databases/$(database)/documents/relSurveys/$(d.surveyId)).data;
+        return d.keys().hasOnly(['surveyId', 'classId', 'uid', 'answers', 'submittedAt'])
+          && responseId == d.surveyId + '_' + request.auth.uid
+          && d.uid == request.auth.uid
+          && d.classId == s.classId && inClass(d.classId)
+          && s.open == true
+          && d.answers is map && d.answers.keys().hasOnly(s.questionIds)
+          && picksOk(d.answers, 'q1', s.maxPicks) && picksOk(d.answers, 'q2', s.maxPicks) && picksOk(d.answers, 'q3', s.maxPicks)
+          && d.submittedAt == request.time;
+      }
+      allow get: if isTeacher() || (signedIn() && responseId.split('_')[1] == request.auth.uid);
+      allow list: if isTeacher();
+      allow create, update: if signedIn() && !isTeacher() && validResponse();
+      allow delete: if isTeacher();
+    }
+    // 교사 관찰 기록
+    match /relNotes/{noteId} {
+      allow read, write: if isTeacher();
+    }
+
     // ───── 학급운영: 일정 ─────
 
     // 학급 달력 일정: 교사가 쓰고 그 반 학생이 봄

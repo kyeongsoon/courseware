@@ -18,6 +18,7 @@ import PollsPage from './pages/PollsPage';
 import PollDetailPage from './pages/PollDetailPage';
 import CounselPage from './pages/CounselPage';
 import CheckInLinkPage from './pages/CheckInLinkPage';
+import RelationsPage from './pages/RelationsPage';
 import AttendancePage from './pages/AttendancePage';
 import SeatingPage from './pages/SeatingPage';
 import CalendarPage from './pages/CalendarPage';
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/checkin" element={<CheckInLinkPage />} />
             <Route path="/seating" element={<SeatingPage />} />
+            <Route path="/relations" element={<RelationsPage />} />
             {/* 학급운영: 일정 */}
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/timetable" element={<TimetablePage />} />

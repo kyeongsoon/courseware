@@ -15,7 +15,7 @@
 | 로그인, 학생 아이디 만들기, 학생 명단, 비밀번호 변경 | 켜짐 |
 | 반 관리 (반 만들기, 학번으로 자동 배정) | 켜짐 |
 | 학급운영 · 소통: 알림장(읽음 확인), 설문·투표, 상담 신청 | 켜짐 |
-| 학급운영 · 생활: 출결·조회 체크, 자리 배치 | 켜짐 |
+| 학급운영 · 생활: 출결(QR)·자리 배치·교우 관계 | 켜짐 |
 | 학급운영 · 일정: 학급 달력, 시간표 | 켜짐 |
 | 수업(단원·차시), 슬라이드(PDF), 실시간 수업 | **꺼 둠** (`VITE_FEATURE_LESSONS=false`) |
 
@@ -177,6 +177,13 @@ firebase deploy --only firestore:rules
   - **인쇄**: 지금 보는 방향 그대로 A4 가로 한 장에 반 이름·날짜와 함께 인쇄됩니다 (교실 게시용은 학생 시점, 교탁용은 교사 시점).
   - **저장**한 뒤 **학생에게 공개**하면 학생 화면에서 자기 자리가 강조됩니다. 공개 전에는 학생이 볼 수 없습니다(열어 둔 학생 화면도 공개 후 10초 안에 보임).
 
+- **교우 관계** (메뉴 **교우 관계** / 학생은 **친구 조사**)
+  - **조사 관리**: 회차(예: 3월, 6월)를 시작하면 학생 홈에 응답 안내가 뜹니다. 기본 질문 3개(모둠 활동을 같이 하고 싶은 친구 / 고민이 있을 때 이야기하는 친구 / 도움을 받고 싶은 친구)에 질문마다 **3명까지** 고릅니다. 미응답 학생 확인, 마감·다시 열기, 삭제.
+  - 학생 응답은 **교사만** 봅니다. 학생은 진행 중인 자기 반 조사에 자기 응답만 쓰고(마감 전까지 수정), 자기 자신·4명 이상은 고를 수 없습니다(보안 규칙).
+  - **관계도**: 학생은 점(크기·숫자 = 받은 선택 수), 선택은 화살표, **서로 고른 관계는 굵은 선**. 친한 무리는 같은 색, **아무도 고르지 않은 학생**은 빨간 점선 테두리와 목록으로 표시. 질문별로 보거나 전체를 합쳐 볼 수 있고, 학생을 누르면 고른 친구·고른 사람을 봅니다.
+  - **변화 보기**: '비교'에서 지난 회차를 고르면 새로 생긴 선택(초록)·사라진 선택(빨간 점선)과 학생별 받은 선택 수 변화를 보여 줍니다. **학생별 추이** 탭은 회차마다 받은 선택 수를 표로 보여 줍니다.
+  - **관찰 기록**: 교사가 본 관계(친함·챙겨 줌·갈등·기타)를 두 학생 사이에 날짜·메모와 함께 남기고, 관계도에 점선으로 겹쳐 볼 수 있습니다.
+
 ## 학급운영 · 일정
 
 - **학급 달력**: 월 달력에 시험·수행평가·행사·과제·기타 일정을 색으로 구분해 보여 줍니다.
@@ -320,6 +327,12 @@ attendance/{반_날짜_학생}   // 출결 (학생은 오늘 '출석'만 처음 
   status ('present'|'late'|'early'|'absent'), reason, note, by ('self'|'teacher'), code(학생이 낸 출석 코드), checkedAt, updatedAt
 classes/{id}.checkInDeadline   // '08:30' — 늦음 표시 기준
 classes/{id}.checkInOpen       // true 면 QR 없이 출석 허용
+relSurveys/{id}      // 교우관계 조사 회차 (교사가 만들고 그 반 학생이 읽음)
+  classId, title, questions[{id:'q1'|'q2'|'q3', text}], questionIds, maxPicks(3), roster[{uid,name,studentId}], open, teacherUid, createdAt
+relResponses/{회차_학생}  // 응답 (학생은 자기 것만, 결과는 교사만)
+  surveyId, classId, uid, answers{q1:[uid…], …}, submittedAt
+relNotes/{id}        // 교사 관찰 기록 (교사만)
+  classId, a, b, kind('close'|'care'|'conflict'|'other'), note, date, teacherUid, createdAt
 checkinCodes/{classId} // 출석 QR 코드 (교사만 읽고 씀, 20초마다 바뀜)
   code, issuedAt, prevCode, prevIssuedAt, teacherUid
 seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이 읽음)
@@ -378,6 +391,8 @@ src/
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
   checkinCode.js              출석 QR 코드 만들기·바꾸기, components/CheckInQr.jsx(교사 화면), QrScanner.jsx(학생 인증 창)
   pages/CheckInLinkPage.jsx   휴대폰 카메라로 QR을 찍으면 열리는 /checkin 주소
+  relations.js                교우관계 조사·응답·관찰 기록과 분석 (서로 고름, 무리, 회차 비교)
+  pages/RelationsPage.jsx, components/RelationGraph.jsx  관계도 (d3-force 배치)
   pages/AttendancePage.jsx, SeatingPage.jsx
   schedule.js                 달력·시간표 데이터와 날짜 계산
   neis.js                     나이스 연동 Firestore 쪽 (settings/school, 일정 가져오기)
