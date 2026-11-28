@@ -383,6 +383,33 @@ service cloud.firestore {
       allow read, write: if isTeacher();
     }
 
+    // ───── 1인 1역 · 청소 당번 ─────
+    match /dutyBoards/{boardId} {
+      allow read: if isTeacher() || inClass(resource.data.classId);
+      allow write: if isTeacher() && request.resource.data.tasks is list && request.resource.data.tasks.size() <= 40;
+    }
+    match /dutyRounds/{roundId} {
+      allow read: if isTeacher() || (inClass(resource.data.classId) && resource.data.published == true);
+      allow write: if isTeacher();
+    }
+    // 학생 '오늘 했어요': 공개된 진행 중 회차에서 자기가 맡은 역할만, 오늘 날짜로
+    match /dutyChecks/{checkId} {
+      function validCheck() {
+        let d = request.resource.data;
+        let r = get(/databases/$(database)/documents/dutyRounds/$(d.roundId)).data;
+        return d.keys().hasOnly(['roundId', 'classId', 'uid', 'taskId', 'date', 'checkedAt'])
+          && d.uid == request.auth.uid
+          && checkId == d.roundId + '_' + string(d.date) + '_' + request.auth.uid
+          && d.date == todayKst() && r.from <= d.date && d.date <= r.to
+          && r.published == true && d.classId == r.classId && inClass(d.classId)
+          && d.taskId in r.assign && request.auth.uid in r.assign[d.taskId]
+          && d.checkedAt == request.time;
+      }
+      allow read: if isTeacher() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && validCheck();
+      allow delete: if isTeacher() || (signedIn() && resource.data.uid == request.auth.uid && resource.data.date == todayKst());
+    }
+
     // ───── 학급운영: 일정 ─────
 
     // 학급 달력 일정: 교사가 쓰고 그 반 학생이 봄

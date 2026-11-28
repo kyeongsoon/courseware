@@ -11,6 +11,7 @@ import { useStudents } from '../useStudents';
 import ClassFeed from '../components/ClassFeed';
 import { MyCheckIn, TodaySummary } from './AttendancePage';
 import { RelationsReminder } from './RelationsPage';
+import { MyDutiesCard } from './DutiesPage';
 import { TodayBoard } from './TimetablePage';
 
 function TeacherHome() {
@@ -119,6 +120,7 @@ export default function DashboardPage() {
       ) : profile?.classId ? (
         <>
           <MyCheckIn compact />
+          <MyDutiesCard />
           <RelationsReminder />
           <TodayBoard />
           <ClassFeed />

@@ -22,6 +22,7 @@ import {
   Menu,
   X,
   Network,
+  ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import LiveBar from './LiveBar';
@@ -49,6 +50,7 @@ function buildSections({ isTeacher, hasPassword }) {
   const lifeItems = [
     { to: '/attendance', label: isTeacher ? '출결' : '출석 체크', icon: CalendarCheck },
     { to: '/seating', label: isTeacher ? '자리 배치' : '자리표', icon: Armchair },
+    { to: '/duties', label: isTeacher ? '역할·청소' : '내 역할·청소', icon: ClipboardList },
     { to: '/relations', label: isTeacher ? '교우 관계' : '친구 조사', icon: Network },
   ];
   const planItems = [
@@ -87,6 +89,7 @@ export function usePageTitle() {
   if (pathname.startsWith('/checkin')) return '출석';
   if (pathname.startsWith('/seating')) return '자리표';
   if (pathname.startsWith('/relations')) return '교우 관계';
+  if (pathname.startsWith('/duties')) return '역할·청소';
   if (pathname.startsWith('/calendar')) return '학급 달력';
   if (pathname.startsWith('/timetable')) return '시간표';
   if (pathname === '/teacher/lessons/new') return '새 차시';

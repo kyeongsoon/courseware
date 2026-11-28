@@ -29,7 +29,8 @@ async function loadShared() {
     getDocs(collection(db, 'relSurveys')),
   ]);
   const responses = await getDocs(collection(db, 'relResponses'));
-  return { notices: notices.docs, polls: polls.docs, seating: seating.docs, surveys: surveys.docs, responses: responses.docs };
+  const duties = await getDocs(collection(db, 'dutyRounds'));
+  return { notices: notices.docs, polls: polls.docs, seating: seating.docs, surveys: surveys.docs, responses: responses.docs, duties: duties.docs };
 }
 
 async function removeRecords(uid, shared) {
@@ -48,6 +49,16 @@ async function removeRecords(uid, shared) {
       await updateDoc(r.ref, { answers, ...(d.conflicts ? { conflicts } : {}) });
       d.answers = answers; // 같은 목록으로 다음 학생을 지울 때 최신 내용 기준으로
       if (d.conflicts) d.conflicts = conflicts;
+    }
+  }
+  // 역할·청소: 체크 기록 지우고 배정표에서 빼기
+  await deleteAll(query(collection(db, 'dutyChecks'), where('uid', '==', uid)));
+  for (const r of shared.duties) {
+    const d = (shared.dutyData ??= new Map()).get(r.id) ?? r.data();
+    shared.dutyData.set(r.id, d);
+    if (Object.values(d.assign ?? {}).some((l) => l.includes(uid))) {
+      d.assign = Object.fromEntries(Object.entries(d.assign).map(([k, l]) => [k, l.filter((x) => x !== uid)]));
+      await updateDoc(r.ref, { assign: d.assign });
     }
   }
   await deleteAll(query(collection(db, 'relNotes'), where('a', '==', uid)));
