@@ -38,8 +38,8 @@ export default function LoginPage() {
     <div className="auth-wrap">
       <div className="card">
         <div className="card-brand">
-          <div className="logo">정</div>
-          <h1>정보 코스웨어</h1>
+          <div className="logo" aria-hidden="true">👋</div>
+          <h1>Hello, Class!</h1>
         </div>
         <p className="muted">선생님께 받은 아이디와 비밀번호로 로그인하세요.</p>
 

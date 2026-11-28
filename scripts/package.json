@@ -1,0 +1,9 @@
+{
+  "name": "courseware-scripts",
+  "private": true,
+  "type": "module",
+  "description": "GitHub Actions 에서 도는 관리 스크립트 (사이트 빌드와는 별개)",
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  }
+}

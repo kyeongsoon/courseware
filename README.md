@@ -1,6 +1,6 @@
-# 정보 코스웨어
+# Hello, Class!
 
-학생과 함께 수업하는 정보교과 웹 코스웨어입니다. (Vite + React + Firebase)
+우리 반 학급운영 웹사이트입니다 (알림장·설문·상담·출결·자리 배치·학급 달력·시간표, 나이스 연동). Vite + React + Firebase
 
 - 전체 개발 로드맵: [docs/GUIDE.md](docs/GUIDE.md)
 - 현재 구현: **① Firebase Authentication + Firestore 로그인**, **② 반(학급) 관리**, **③ 수업(단원·차시)**, **④ 실시간 수업 모드**
@@ -194,6 +194,24 @@ firebase deploy --only firestore:rules
 4. **시간표 → 나이스에서 가져오기**: 학년·반과 가져올 주를 고르고 **불러오기**하면 그 주 시간표가 편집 화면에 채워집니다.
    교시 시간·교실은 기존 값이 유지되니 확인하고 **저장**하세요 (나이스 시간표는 학교가 입력한 만큼만 나옵니다).
 
+### 매일 아침 자동 갱신 (나이스)
+
+GitHub Actions(`.github/workflows/neis-sync.yml`)가 **매일 한국 시각 06:45쯤** `scripts/neis-sync.mjs`를 실행해서, 7시 전에 모든 반에 반영합니다. 서버·결제가 필요 없습니다.
+
+- **학사일정**: 올해 학년도 전체에서 나이스에서 가져온 일정만 비교해 **바뀐 것만** 지우고 더합니다. 직접 만든 일정은 그대로입니다.
+- **시간표**: 이번 주(주말에는 다음 주) 나이스 시간표의 과목을 반영합니다. 교시 시간은 그대로이고, 과목이 같은 칸은 교실도 그대로입니다. 나이스에 그 주 자료가 없으면(방학 등) 건드리지 않습니다.
+- 반 이름이 `3학년 1반`처럼 되어 있어야 그 반 시간표를 가져옵니다. 학년을 못 읽는 반은 학교 전체 일정만 받습니다.
+- 결과는 **학교 설정** 화면 아래 '마지막 자동 갱신'에 보입니다. 끄려면 학교 설정에서 체크를 끄고 저장하세요.
+- 바로 실행: GitHub 저장소 → **Actions → NEIS daily sync → Run workflow**.
+
+**처음 한 번 필요한 설정**: 자동 배포에 쓰는 서비스 계정이 Firestore 데이터를 쓸 수 있어야 합니다.
+
+1. <https://console.cloud.google.com/iam-admin/iam?project=courseware-acba8> 접속
+2. 배포용 서비스 계정(`…@courseware-acba8.iam.gserviceaccount.com`) 줄의 연필(수정) 버튼 → **다른 역할 추가**
+3. `Cloud Datastore 사용자` (Cloud Datastore User) 를 골라 **저장**
+
+> GitHub은 저장소에 60일 동안 커밋이 없으면 예약 실행을 멈춥니다. 그때는 Actions 탭에서 다시 켜 주세요.
+
 ## 학생 계정 삭제 (교사)
 
 **학생 명단**에서 학생 줄의 **삭제**를 누르거나, 여러 명을 체크한 뒤 **선택한 학생 삭제**를 누릅니다.
@@ -301,9 +319,11 @@ seating/{classId}    // 자리표 (교사만 씀, 공개하면 그 반 학생이
 events/{id}          // 학급 달력 일정
   classId, title, type ('시험'|'수행평가'|'행사'|'과제'|'기타'), date, endDate, note, source ('neis'|없음), teacherUid, createdAt
 settings/school      // 나이스 연동 (교사만 읽고 씀)
-  atptCode, schoolCode, schoolName, kind, region, apiKey, updatedAt
+  atptCode, schoolCode, schoolName, kind, region, apiKey, autoSync(false면 자동 갱신 끔), updatedAt
+settings/neisSync    // 매일 아침 자동 갱신 결과 (GitHub Actions가 씀)
+  at, ok, message, today, classes[{name, summary}]
 timetables/{classId} // 시간표
-  days(5|6), periods(1~10), times['09:00-09:45', …], cells[ {s: 과목, r: 교실} | null ] (요일 먼저), teacherUid, updatedAt
+  days(5|6), periods(1~10), times['09:00-09:45', …], cells[ {s: 과목, r: 교실} | null ] (요일 먼저), neisWeek(자동 갱신한 주 월요일), teacherUid, updatedAt
 
 live/{classId}       // 실시간 수업 (반마다 하나, 교사만 씀)
   active, className, lessonId, slide, follow, videoMode ('sync' | 'teacher')
@@ -349,7 +369,9 @@ src/
   attendance.js, seating.js   출결·자리표 데이터 (배치·교환·크기 바꾸기)
   pages/AttendancePage.jsx, SeatingPage.jsx
   schedule.js                 달력·시간표 데이터와 날짜 계산
-  neis.js                     나이스 API (학교 검색, 학사일정, 시간표) + settings/school
+  neis.js                     나이스 연동 Firestore 쪽 (settings/school, 일정 가져오기)
+  neisCore.js, scheduleCore.js 나이스 호출·날짜·시간표 계산 (화면과 자동 갱신 스크립트가 같이 씀)
+scripts/neis-sync.mjs         매일 아침 나이스 자동 갱신 (GitHub Actions)
   pages/SchoolSettingsPage.jsx 학교 설정 (나이스 키·학교)
   pages/CalendarPage.jsx, TimetablePage.jsx (홈의 '오늘 시간표·다가오는 일정' 포함)
   pages/Notices*.jsx, Poll*.jsx, CounselPage.jsx
