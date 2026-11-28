@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStudents } from '../useStudents';
 import ClassFeed from '../components/ClassFeed';
 import { MyCheckIn, TodaySummary } from './AttendancePage';
+import { RelationsReminder } from './RelationsPage';
 import { TodayBoard } from './TimetablePage';
 
 function TeacherHome() {
@@ -118,6 +119,7 @@ export default function DashboardPage() {
       ) : profile?.classId ? (
         <>
           <MyCheckIn compact />
+          <RelationsReminder />
           <TodayBoard />
           <ClassFeed />
           {FEATURES.lessons && <StudentLessons classId={profile.classId} />}
