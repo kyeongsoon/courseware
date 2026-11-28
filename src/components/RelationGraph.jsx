@@ -47,7 +47,7 @@ function trim(a, b, ra, rb) {
  * edges: [{ from, to, weight, mutual, status?('added'|'removed'|'kept') }]
  * notes: 관찰 기록 [{ a, b, kind }] (선택)
  */
-export default function RelationGraph({ roster, edges, layoutEdges, deg, groups, notes = [], selected, onSelect, compare = false }) {
+export default function RelationGraph({ roster, edges, layoutEdges, deg, groups, notes = [], conflicts = [], selected, onSelect, compare = false }) {
   const radius = (uid) => 17 + Math.min(5, deg[uid]?.inn ?? 0) * 3;
   const { pos, vb } = useLayout(roster, layoutEdges ?? edges, radius);
   const touches = (e) => !selected || e.from === selected || e.to === selected || e.a === selected || e.b === selected;
@@ -56,7 +56,7 @@ export default function RelationGraph({ roster, edges, layoutEdges, deg, groups,
   return (
     <svg className="rel-graph" viewBox={vb} role="img" aria-label="학급 관계도" onClick={() => onSelect?.(null)}>
       <defs>
-        {[['arrow', '#71717a'], ['arrow-added', EDGE.added], ['arrow-removed', EDGE.removed], ['arrow-hi', '#18181b']].map(([id, c]) => (
+        {[['arrow', '#71717a'], ['arrow-added', EDGE.added], ['arrow-removed', EDGE.removed], ['arrow-hi', '#18181b'], ['arrow-conflict', '#dc2626']].map(([id, c]) => (
           <marker key={id} id={id} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill={c} />
           </marker>
@@ -68,6 +68,14 @@ export default function RelationGraph({ roster, edges, layoutEdges, deg, groups,
         if (!a || !b) return null;
         return <line key={n.id} className="rel-note" x1={a.x} y1={a.y} x2={b.x} y2={b.y}
           stroke={NOTE_KINDS[n.kind]?.color ?? '#71717a'} strokeWidth={3} strokeDasharray="2 6" strokeLinecap="round" opacity={touches(n) ? 0.8 : 0.12} />;
+      })}
+
+      {conflicts.map((c) => {
+        const a = pos[c.from], b = pos[c.to];
+        if (!a || !b) return null;
+        const l = trim(a, b, radius(c.from), radius(c.to));
+        return <line key={`c-${c.from}>${c.to}`} className="rel-conflict" {...l} stroke="#dc2626" strokeWidth={2.4} strokeDasharray="7 5"
+          markerEnd="url(#arrow-conflict)" opacity={touches(c) ? 0.9 : 0.12} />;
       })}
 
       {edges.map((e) => {

@@ -646,3 +646,11 @@ input[type='date'], input[type='month'], input[type='time'], input[type='number'
 .rel-foot { margin-top: 16px; }
 
 .link-btn { border: 0; background: none; padding: 0; color: var(--primary-text); font: inherit; font-size: 0.85rem; cursor: pointer; text-decoration: underline; }
+.rel-q-conflict { border-color: #fecaca !important; background: #fffafa; }
+.rel-q-conflict legend { display: inline-flex; align-items: center; gap: 6px; color: #b91c1c; }
+.conflict-safe { margin: 0 0 8px; color: var(--text-2); }
+.chip-btn.conflict.on { border-color: #dc2626; background: #fee2e2; color: #991b1b; }
+.conflict-text { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.conflict-box { border-color: #fecaca; }
+.conflict-box h3 { display: flex; align-items: center; gap: 6px; color: #b91c1c; }
+.small-tabs { margin: 6px 0 10px; width: fit-content; }
