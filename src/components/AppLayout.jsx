@@ -8,6 +8,8 @@ import {
   Megaphone,
   Vote,
   HeartHandshake,
+  CalendarCheck,
+  Armchair,
   UserPlus,
   KeyRound,
   CircleHelp,
@@ -41,7 +43,11 @@ function buildSections({ isTeacher, hasPassword }) {
     { to: '/polls', label: '설문·투표', icon: Vote },
     { to: '/counsel', label: isTeacher ? '상담 신청함' : '상담 신청', icon: HeartHandshake },
   ];
-  const sections = [{ title: '우리 반', items: classItems }];
+  const lifeItems = [
+    { to: '/attendance', label: isTeacher ? '출결' : '출석 체크', icon: CalendarCheck },
+    { to: '/seating', label: isTeacher ? '자리 배치' : '자리표', icon: Armchair },
+  ];
+  const sections = [{ title: '우리 반', items: classItems }, { title: '생활', items: lifeItems }];
   if (isTeacher && FEATURES.lessons) {
     sections.push({ title: '수업', items: [{ to: '/teacher/lessons', label: '수업 관리', icon: Library }] });
   }
@@ -67,6 +73,8 @@ export function usePageTitle() {
   if (pathname.startsWith('/notices')) return '알림장';
   if (pathname.startsWith('/polls')) return '설문·투표';
   if (pathname.startsWith('/counsel')) return '상담';
+  if (pathname.startsWith('/attendance')) return '출결';
+  if (pathname.startsWith('/seating')) return '자리표';
   if (pathname === '/teacher/lessons/new') return '새 차시';
   if (pathname.endsWith('/edit')) return '차시 수정';
   if (pathname.startsWith('/teacher/lessons')) return '수업 관리';
